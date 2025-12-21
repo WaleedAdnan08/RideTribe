@@ -2,11 +2,8 @@ import requests
 import json
 import random
 import string
-<<<<<<< HEAD
 import time
 from datetime import datetime, timedelta
-=======
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 
@@ -27,33 +24,35 @@ def test_health():
         print("Health Check Failed with connection error:", e)
         return False
 
-<<<<<<< HEAD
 def test_signup(phone, name="Test User"):
     # print(f"\nTesting Signup for phone {phone}...")
     payload = {
         "name": name,
-=======
-def test_signup(phone):
-    print(f"\nTesting Signup for phone {phone}...")
-    payload = {
-        "name": "Test User",
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
         "phone": phone,
         "password": "password123"
     }
     response = requests.post(f"{BASE_URL}/auth/signup", json=payload)
     if response.status_code == 200:
-<<<<<<< HEAD
         # print("Signup Passed:", response.json().get("user"))
-=======
-        print("Signup Passed:", response.json().get("user"))
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
         return response.json()
     else:
         print("Signup Failed:", response.status_code, response.text)
         return None
 
-<<<<<<< HEAD
+def test_login(phone):
+    print(f"\nTesting Login for phone {phone}...")
+    payload = {
+        "phone": phone,
+        "password": "password123"
+    }
+    response = requests.post(f"{BASE_URL}/auth/login", json=payload)
+    if response.status_code == 200:
+        print("Login Passed")
+        return response.json().get("access_token")
+    else:
+        print("Login Failed:", response.status_code, response.text)
+        return None
+
 def test_create_tribe(token):
     headers = {"Authorization": f"Bearer {token}"}
     payload = {
@@ -78,34 +77,11 @@ def test_create_destination(token, name="Match School"):
     payload = {
         "name": name,
         "address": "123 Match Lane",
-=======
-def test_login(phone):
-    print(f"\nTesting Login for phone {phone}...")
-    payload = {
-        "phone": phone,
-        "password": "password123"
-    }
-    response = requests.post(f"{BASE_URL}/auth/login", json=payload)
-    if response.status_code == 200:
-        print("Login Passed")
-        return response.json().get("access_token")
-    else:
-        print("Login Failed:", response.status_code, response.text)
-        return None
-
-def test_create_destination(token):
-    print("\nTesting Create Destination...")
-    headers = {"Authorization": f"Bearer {token}"}
-    payload = {
-        "name": "Test School",
-        "address": "123 School Lane",
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
         "category": "school",
         "geo": {"lat": 40.7128, "lng": -74.0060}
     }
     response = requests.post(f"{BASE_URL}/destinations/", json=payload, headers=headers)
     if response.status_code == 201:
-<<<<<<< HEAD
         return response.json().get("_id")
     return None
 
@@ -212,70 +188,3 @@ def run_matching_test():
 
 if __name__ == "__main__":
     run_matching_test()
-=======
-        print("Create Destination Passed:", response.json().get("_id"))
-        return response.json().get("_id")
-    else:
-        print("Create Destination Failed:", response.status_code, response.text)
-        return None
-
-def test_create_tribe(token):
-    print("\nTesting Create Tribe...")
-    headers = {"Authorization": f"Bearer {token}"}
-    payload = {
-        "name": "Test Tribe"
-    }
-    response = requests.post(f"{BASE_URL}/tribes/", json=payload, headers=headers)
-    if response.status_code == 200:
-        print("Create Tribe Passed:", response.json().get("_id"))
-        return response.json().get("_id")
-    else:
-        print("Create Tribe Failed:", response.status_code, response.text)
-        return None
-
-def test_create_schedule(token, destination_id):
-    print("\nTesting Create Schedule...")
-    headers = {"Authorization": f"Bearer {token}"}
-    payload = {
-        "child_name": "Junior",
-        "destination_id": destination_id,
-        "recurrence": "daily",
-        "status": "active"
-    }
-    # Using a future date for pickup_time if needed, but the model says Optional
-    # Let's add a time just in case logic depends on it
-    from datetime import datetime, timedelta
-    tomorrow = datetime.utcnow() + timedelta(days=1)
-    payload["pickup_time"] = tomorrow.isoformat()
-
-    response = requests.post(f"{BASE_URL}/schedules/", json=payload, headers=headers)
-    if response.status_code == 201:
-        print("Create Schedule Passed:", response.json().get("_id"))
-        return response.json().get("_id")
-    else:
-        print("Create Schedule Failed:", response.status_code, response.text)
-        return None
-
-def run_tests():
-    if not test_health():
-        return
-
-    phone = generate_random_phone()
-    auth_data = test_signup(phone)
-    
-    if auth_data:
-        token = auth_data.get("access_token")
-        
-        # Test Login separately (optional since signup returns token, but good to verify)
-        login_token = test_login(phone)
-        
-        if token:
-            dest_id = test_create_destination(token)
-            tribe_id = test_create_tribe(token)
-            
-            if dest_id:
-                test_create_schedule(token, dest_id)
-
-if __name__ == "__main__":
-    run_tests()
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9

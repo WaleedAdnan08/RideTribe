@@ -1,12 +1,7 @@
 from typing import Optional, Annotated
-<<<<<<< HEAD
 from pydantic import BaseModel, Field, BeforeValidator, ConfigDict, field_validator
 from datetime import datetime
 from utils import normalize_phone
-=======
-from pydantic import BaseModel, Field, BeforeValidator, ConfigDict
-from datetime import datetime
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
 
 # Helper to map ObjectId to string
 PyObjectId = Annotated[str, BeforeValidator(str)]
@@ -15,14 +10,11 @@ class UserBase(BaseModel):
     name: str
     phone: str
 
-<<<<<<< HEAD
     @field_validator('phone')
     @classmethod
     def validate_phone(cls, v: str) -> str:
         return normalize_phone(v)
 
-=======
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
 class UserCreate(UserBase):
     password: str
     
@@ -35,14 +27,11 @@ class UserLogin(BaseModel):
     phone: str
     password: str
 
-<<<<<<< HEAD
     @field_validator('phone')
     @classmethod
     def validate_phone(cls, v: str) -> str:
         return normalize_phone(v)
 
-=======
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
 class UserInDB(UserBase):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     hashed_password: str
@@ -94,14 +83,11 @@ class TribeInvite(BaseModel):
     phone_number: str
     trust_level: str = "direct"
 
-<<<<<<< HEAD
     @field_validator('phone_number')
     @classmethod
     def validate_phone(cls, v: str) -> str:
         return normalize_phone(v)
 
-=======
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
 class TribeMembershipBase(BaseModel):
     tribe_id: PyObjectId
     user_id: PyObjectId

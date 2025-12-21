@@ -64,27 +64,15 @@ async def find_and_create_matches(schedule_id: str):
         existing_match = await db.matches.find_one({
             "$or": [
                 {
-<<<<<<< HEAD
-                    "requester_id": user_id,
-                    "provider_id": match_schedule["user_id"],
-                    "schedule_entry_id": schedule_id,
-                    "provider_schedule_id": str(match_schedule["_id"])
-                },
-                {
-                    "requester_id": match_schedule["user_id"],
-                    "provider_id": user_id,
-                    "schedule_entry_id": str(match_schedule["_id"]),
-=======
                     "requester_id": user_id, 
                     "provider_id": match_schedule["user_id"], 
-                    "schedule_entry_id": ObjectId(schedule_id),
+                    "schedule_entry_id": schedule_id,
                     "provider_schedule_id": str(match_schedule["_id"])
                 },
                 {
                     "requester_id": match_schedule["user_id"], 
                     "provider_id": user_id, 
-                    "schedule_entry_id": match_schedule["_id"],
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
+                    "schedule_entry_id": str(match_schedule["_id"]),
                     "provider_schedule_id": str(schedule_id)
                 }
             ]
@@ -97,11 +85,7 @@ async def find_and_create_matches(schedule_id: str):
         match_in_db = RideMatchInDB(
             requester_id=user_id,
             provider_id=match_schedule["user_id"],
-<<<<<<< HEAD
             schedule_entry_id=schedule_id,
-=======
-            schedule_entry_id=ObjectId(schedule_id),
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
             provider_schedule_id=str(match_schedule["_id"]),
             match_score=95, # Mock score for MVP
             status="suggested"

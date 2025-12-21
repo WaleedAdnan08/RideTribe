@@ -40,25 +40,18 @@ const TribePage = () => {
   const fetchTribes = async () => {
     try {
       setIsLoading(true);
-<<<<<<< HEAD
       const rawData = await tribeApi.list();
       // Map _id to id if necessary
       const data = rawData.map((t: any) => ({
         ...t,
         id: t.id || t._id
       }));
-=======
-      const data = await tribeApi.list();
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
       setTribes(data);
       
       // Fetch members for each tribe
       const membersData: Record<string, TribeMember[]> = {};
       for (const tribe of data) {
-<<<<<<< HEAD
         if (!tribe.id) continue;
-=======
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
         try {
           const members = await tribeApi.getMembers(tribe.id);
           membersData[tribe.id] = members;
@@ -109,7 +102,6 @@ const TribePage = () => {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-<<<<<<< HEAD
     console.log("handleInvite called", { selectedTribeId, inviteData });
     if (!selectedTribeId || !inviteData.phoneNumber) {
       console.warn("Missing required data for invite", { selectedTribeId, phoneNumber: inviteData.phoneNumber });
@@ -128,26 +120,11 @@ const TribePage = () => {
         ...prev,
         [selectedTribeId]: [...(prev[selectedTribeId] || []), newMember]
       }));
-=======
-    if (!selectedTribeId || !inviteData.phoneNumber) return;
-
-    try {
-      setIsInviting(true);
-      await tribeApi.invite(selectedTribeId, inviteData.phoneNumber, inviteData.trustLevel);
-      toast({ title: "Success", description: "Member invited successfully!" });
-      
-      // Refresh members for this tribe
-      const members = await tribeApi.getMembers(selectedTribeId);
-      setTribeMembers(prev => ({ ...prev, [selectedTribeId]: members }));
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
       
       setIsInviteDialogOpen(false);
       setInviteData({ phoneNumber: "", trustLevel: "direct" });
     } catch (error: any) {
-<<<<<<< HEAD
       console.error("Invite failed", error);
-=======
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
       toast({
         title: "Error",
         description: error.message || "Failed to invite member. Make sure they are registered.",

@@ -79,18 +79,11 @@ async def list_tribe_members(tribe_id: str, current_user: UserInDB = Depends(get
 
 @router.post("/{tribe_id}/invite", response_model=TribeMemberResponse)
 async def invite_member(
-<<<<<<< HEAD
     tribe_id: str,
     invite: TribeInvite,
     current_user: UserInDB = Depends(get_current_user)
 ):
     print(f"DEBUG: invite_member called for tribe_id={tribe_id}, invite={invite}")
-=======
-    tribe_id: str, 
-    invite: TribeInvite, 
-    current_user: UserInDB = Depends(get_current_user)
-):
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
     # Check if tribe exists
     tribe = await db.tribes.find_one({"_id": ObjectId(tribe_id)})
     if not tribe:
@@ -104,19 +97,12 @@ async def invite_member(
         )
         
     # Find user by phone
-<<<<<<< HEAD
     print(f"DEBUG: searching for user with phone: {invite.phone_number}")
     user_to_invite = await db.users.find_one({"phone": invite.phone_number})
     if not user_to_invite:
         print(f"DEBUG: User not found for phone: {invite.phone_number}")
         raise HTTPException(
             status_code=404,
-=======
-    user_to_invite = await db.users.find_one({"phone": invite.phone_number})
-    if not user_to_invite:
-        raise HTTPException(
-            status_code=404, 
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
             detail="User with this phone number not found. They must be registered first."
         )
         

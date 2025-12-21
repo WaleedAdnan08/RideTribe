@@ -22,22 +22,13 @@ const NavLink = ({ to, icon: Icon, label, isMobile }: NavLinkProps) => (
     className={cn(
       "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
       "hover:bg-primary/10 hover:text-primary", // More subtle hover for nav links
-<<<<<<< HEAD
       isMobile ? "w-full justify-start" : "justify-start w-full",
-=======
-      isMobile ? "w-full justify-start" : "justify-center",
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
       // Active link styling (optional, but good for UX)
       // location.pathname === to ? "bg-primary text-primary-foreground" : "text-sidebar-foreground"
     )}
   >
     <Icon className="h-5 w-5" />
-<<<<<<< HEAD
     <span>{label}</span>
-=======
-    {!isMobile && <span className="sr-only">{label}</span>}
-    {isMobile && <span>{label}</span>}
->>>>>>> 99a7bd89d699575d6cfb6dac3b9a739fe47fe8e9
   </Link>
 );
 
