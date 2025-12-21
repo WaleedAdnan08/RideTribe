@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from typing import List, Optional
 from bson import ObjectId
+from bson.errors import InvalidId
 from db import db
 from models import (
     UserInDB,
@@ -86,12 +87,17 @@ async def delete_schedule(
     """
     Delete a schedule entry.
     """
+    try:
+        oid = ObjectId(schedule_id)
+    except (InvalidId, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid schedule ID format")
+
     result = await db.schedules.delete_one({
-        "_id": ObjectId(schedule_id),
+        "_id": oid,
         "user_id": str(current_user.id)
     })
     
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Schedule not found")
+        raise HTTPException(status_code=404, detail="Schedule not found or you don't have permission to delete it")
         
     return None

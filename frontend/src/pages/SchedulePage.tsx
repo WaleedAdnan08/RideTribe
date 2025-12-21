@@ -105,9 +105,13 @@ const SchedulePage = () => {
       await schedulesApi.delete(id);
       setSchedules(prev => prev.filter(s => s._id !== id && s.id !== id));
       toast({ title: "Deleted", description: "Trip removed." });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Delete failed", error);
-      toast({ title: "Error", description: "Failed to delete trip.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete trip.",
+        variant: "destructive"
+      });
     }
   };
 
