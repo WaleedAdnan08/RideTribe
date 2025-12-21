@@ -63,3 +63,45 @@ async def login(user_credentials: UserLogin):
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(current_user: UserInDB = Depends(get_current_user)):
     return current_user
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_me(current_user: UserInDB = Depends(get_current_user)):
+    """
+    Delete the current user's account and all associated data.
+    """
+    user_id = str(current_user.id)
+    
+    # 1. Delete associated data first
+    
+    # Delete destinations created by user
+    await db.destinations.delete_many({"created_by": current_user.id})
+    
+    # Delete schedules created by user
+    await db.schedules.delete_many({"user_id": user_id})
+    
+    # Delete matches where user is requester or provider
+    await db.matches.delete_many({
+        "$or": [
+            {"requester_id": user_id},
+            {"provider_id": user_id}
+        ]
+    })
+    
+    # Remove from tribes (as member)
+    await db.tribe_members.delete_many({"user_id": user_id})
+    
+    # Delete tribes owned by user (and their memberships)
+    # First find tribes owned by user
+    owned_tribes = await db.tribes.find({"owner_id": user_id}).to_list(1000)
+    owned_tribe_ids = [str(t["_id"]) for t in owned_tribes]
+    
+    if owned_tribe_ids:
+        # Delete memberships for these tribes
+        await db.tribe_members.delete_many({"tribe_id": {"$in": owned_tribe_ids}})
+        # Delete the tribes themselves
+        await db.tribes.delete_many({"owner_id": user_id})
+
+    # 2. Delete the user
+    await db.users.delete_one({"_id": current_user.id})
+    
+    return None

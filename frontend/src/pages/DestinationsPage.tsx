@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, PlusCircle, Globe, Loader2 } from "lucide-react";
+import { MapPin, PlusCircle, Globe, Loader2, Trash2, Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import api from "@/lib/api";
+import api, { destinationsApi } from "@/lib/api";
 import { Destination } from "@/types";
 
 const DestinationsPage = () => {
@@ -23,6 +23,7 @@ const DestinationsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -62,6 +63,46 @@ const DestinationsPage = () => {
     setFormData((prev) => ({ ...prev, category: value }));
   };
 
+  const resetForm = () => {
+    setFormData({ name: "", address: "", category: "Activity" });
+    setEditingId(null);
+  };
+
+  const handleEditClick = (dest: Destination) => {
+    setFormData({
+      name: dest.name,
+      address: dest.address,
+      category: dest.category || "Activity",
+    });
+    setEditingId(dest.id || dest._id || null);
+    setIsDialogOpen(true);
+  };
+
+  const handleCreateClick = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this destination?")) return;
+    
+    try {
+      await destinationsApi.delete(id);
+      setDestinations(prev => prev.filter(d => (d.id || d._id) !== id));
+      toast({
+        title: "Deleted",
+        description: "Destination removed successfully.",
+      });
+    } catch (error) {
+      console.error("Failed to delete destination:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete destination.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.address) {
@@ -75,23 +116,31 @@ const DestinationsPage = () => {
 
     try {
       setIsSubmitting(true);
-      // Basic implementation: sending name, address, category. 
-      // Geo is omitted for MVP as per plan.
-      await api.post<Destination>("/destinations", formData);
       
-      toast({
-        title: "Success",
-        description: "Destination added successfully!",
-      });
+      if (editingId) {
+        // Update existing
+        await destinationsApi.update(editingId, formData);
+        toast({
+          title: "Success",
+          description: "Destination updated successfully!",
+        });
+      } else {
+        // Create new
+        await api.post<Destination>("/destinations", formData);
+        toast({
+          title: "Success",
+          description: "Destination added successfully!",
+        });
+      }
       
       setIsDialogOpen(false);
-      setFormData({ name: "", address: "", category: "Activity" });
+      resetForm();
       fetchDestinations(); // Refresh list
     } catch (error) {
-      console.error("Failed to create destination:", error);
+      console.error("Failed to save destination:", error);
       toast({
         title: "Error",
-        description: "Failed to create destination. Please try again.",
+        description: "Failed to save destination. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -113,15 +162,15 @@ const DestinationsPage = () => {
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="mb-6">
+              <Button className="mb-6" onClick={handleCreateClick}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Destination
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Add Destination</DialogTitle>
+                <DialogTitle>{editingId ? "Edit Destination" : "Add Destination"}</DialogTitle>
                 <DialogDescription>
-                  Enter the details of the new destination here.
+                  {editingId ? "Update the details of this destination." : "Enter the details of the new destination here."}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit}>
@@ -192,36 +241,51 @@ const DestinationsPage = () => {
                   <TableHead>Address</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Date Added</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {destinations.map((dest) => (
-                  <TableRow key={dest.id}>
-                    <TableCell className="font-medium">{dest.name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        {dest.address}
-                      </div>
-                      {(dest.geo || (dest.latitude && dest.longitude)) && (
-                        <p className="text-xs text-muted-foreground">
-                          <Globe className="inline-block h-3 w-3 mr-1" />
-                          {dest.geo 
-                            ? `Lat: ${dest.geo.lat.toFixed(4)}, Lng: ${dest.geo.lng.toFixed(4)}`
-                            : `Lat: ${dest.latitude?.toFixed(4)}, Lng: ${dest.longitude?.toFixed(4)}`
-                          }
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{dest.category || "N/A"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {dest.created_at ? format(parseISO(dest.created_at), "MMM dd, yyyy") : 
-                       dest.verified_date ? format(parseISO(dest.verified_date), "MMM dd, yyyy") : "N/A"}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {destinations.map((dest) => {
+                  const id = dest.id || dest._id;
+                  if (!id) return null;
+                  return (
+                    <TableRow key={id}>
+                      <TableCell className="font-medium">{dest.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          {dest.address}
+                        </div>
+                        {(dest.geo || (dest.latitude && dest.longitude)) && (
+                          <p className="text-xs text-muted-foreground">
+                            <Globe className="inline-block h-3 w-3 mr-1" />
+                            {dest.geo
+                              ? `Lat: ${dest.geo.lat.toFixed(4)}, Lng: ${dest.geo.lng.toFixed(4)}`
+                              : `Lat: ${dest.latitude?.toFixed(4)}, Lng: ${dest.longitude?.toFixed(4)}`
+                            }
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{dest.category || "N/A"}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {dest.created_at ? format(parseISO(dest.created_at), "MMM dd, yyyy") :
+                        dest.verified_date ? format(parseISO(dest.verified_date), "MMM dd, yyyy") : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(dest)}>
+                            <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(id)}>
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (

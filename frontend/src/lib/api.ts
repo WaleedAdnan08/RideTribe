@@ -61,16 +61,23 @@ export const tribeApi = {
   getMembers: (tribeId: string) => api.get<any[]>(`/tribes/${tribeId}/members`),
   invite: (tribeId: string, phoneNumber: string, trustLevel: string) =>
     api.post<any>(`/tribes/${tribeId}/invite`, { phone_number: phoneNumber, trust_level: trustLevel }),
+  removeMember: (tribeId: string, userId: string) =>
+    api.delete<void>(`/tribes/${tribeId}/members/${userId}`),
+  updateMemberTrust: (tribeId: string, userId: string, trustLevel: string) =>
+    api.patch<any>(`/tribes/${tribeId}/members/${userId}`, { trust_level: trustLevel }),
 };
 export const destinationsApi = {
   list: () => api.get<any[]>('/destinations'),
   create: (data: any) => api.post<any>('/destinations', data),
+  delete: (id: string) => api.delete<void>(`/destinations/${id}`),
+  update: (id: string, data: any) => api.put<any>(`/destinations/${id}`, data),
 };
 
 export const schedulesApi = {
   list: () => api.get<any[]>('/schedules'),
   create: (data: any) => api.post<any>('/schedules', data),
   delete: (id: string) => api.delete<void>(`/schedules/${id}`),
+  update: (id: string, data: any) => api.put<any>(`/schedules/${id}`, data),
 };
 
 export const matchesApi = {

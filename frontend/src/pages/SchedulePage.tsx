@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarPlus, MapPin, Clock, Repeat, Loader2, Trash2 } from "lucide-react";
+import { CalendarPlus, MapPin, Clock, Repeat, Loader2, Trash2, Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ const SchedulePage = () => {
   // Create Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     child_name: "",
@@ -34,6 +35,44 @@ const SchedulePage = () => {
     pickup_time_part: "",
     recurrence: "once"
   });
+
+  const resetForm = () => {
+    setFormData({
+      child_name: "",
+      destination_id: "",
+      pickup_date: "",
+      pickup_time_part: "",
+      recurrence: "once"
+    });
+    setEditingId(null);
+  };
+
+  const handleCreateClick = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
+  const handleEditClick = (schedule: any) => {
+    // Parse the date to split into date and time
+    let dateStr = "";
+    let timeStr = "";
+    
+    if (schedule.pickup_time) {
+      const date = parseISO(schedule.pickup_time);
+      dateStr = format(date, "yyyy-MM-dd");
+      timeStr = format(date, "HH:mm");
+    }
+
+    setFormData({
+      child_name: schedule.child_name,
+      destination_id: schedule.destination_id,
+      pickup_date: dateStr,
+      pickup_time_part: timeStr,
+      recurrence: schedule.recurrence || "once"
+    });
+    setEditingId(schedule.id || schedule._id);
+    setIsDialogOpen(true);
+  };
 
   const fetchData = async () => {
     try {
@@ -62,7 +101,7 @@ const SchedulePage = () => {
     }
   }, [currentUser]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.child_name || !formData.destination_id || !formData.pickup_date || !formData.pickup_time_part) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
@@ -77,21 +116,27 @@ const SchedulePage = () => {
       const isoDate = date.toISOString();
 
       const { pickup_date, pickup_time_part, ...submitData } = formData;
-
-      await schedulesApi.create({
+      const apiData = {
         ...submitData,
         pickup_time: isoDate,
-        dropoff_time: isoDate // Simplified for MVP: dropoff same as pickup or calculated
-      });
+        dropoff_time: isoDate
+      };
 
-      toast({ title: "Success", description: "Trip scheduled successfully!" });
+      if (editingId) {
+        await schedulesApi.update(editingId, apiData);
+        toast({ title: "Success", description: "Trip updated successfully!" });
+      } else {
+        await schedulesApi.create(apiData);
+        toast({ title: "Success", description: "Trip scheduled successfully!" });
+      }
+
       setIsDialogOpen(false);
-      setFormData({ child_name: "", destination_id: "", pickup_date: "", pickup_time_part: "", recurrence: "once" });
+      resetForm();
       fetchData();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create schedule.",
+        description: error.message || "Failed to save schedule.",
         variant: "destructive",
       });
     } finally {
@@ -137,16 +182,16 @@ const SchedulePage = () => {
           </p>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="mb-6">
+              <Button className="mb-6" onClick={handleCreateClick}>
                 <CalendarPlus className="mr-2 h-4 w-4" /> Add New Trip
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Schedule a Trip</DialogTitle>
-                <DialogDescription>Add a new transportation need for your child.</DialogDescription>
+                <DialogTitle>{editingId ? "Edit Trip" : "Schedule a Trip"}</DialogTitle>
+                <DialogDescription>{editingId ? "Update existing trip details." : "Add a new transportation need for your child."}</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreate}>
+              <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right">Child Name</Label>
@@ -271,10 +316,15 @@ const SchedulePage = () => {
                           {entry.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(entry._id || entry.id)}>
-                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                        </Button>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(entry)}>
+                            <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(entry._id || entry.id)}>
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

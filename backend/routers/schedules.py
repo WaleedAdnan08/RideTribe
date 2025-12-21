@@ -8,7 +8,8 @@ from models import (
     ScheduleEntryCreate,
     ScheduleEntryResponse,
     ScheduleEntryInDB,
-    DestinationResponse
+    DestinationResponse,
+    ScheduleEntryUpdate
 )
 from auth import get_current_user
 
@@ -101,3 +102,64 @@ async def delete_schedule(
         raise HTTPException(status_code=404, detail="Schedule not found or you don't have permission to delete it")
         
     return None
+
+@router.put("/{schedule_id}", response_model=ScheduleEntryResponse)
+async def update_schedule(
+    schedule_id: str,
+    schedule_update: ScheduleEntryUpdate,
+    background_tasks: BackgroundTasks,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    """
+    Update a schedule entry.
+    """
+    try:
+        oid = ObjectId(schedule_id)
+    except (InvalidId, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid schedule ID format")
+    
+    # Check if schedule exists and belongs to user
+    existing_schedule = await db.schedules.find_one({"_id": oid, "user_id": str(current_user.id)})
+    if not existing_schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found or you don't have permission to update it")
+        
+    update_data = {k: v for k, v in schedule_update.model_dump().items() if v is not None}
+    
+    if not update_data:
+        # Just return existing enriched
+        dest_id = existing_schedule.get("destination_id")
+        destination = None
+        if dest_id:
+             dest_data = await db.destinations.find_one({"_id": ObjectId(dest_id)})
+             if dest_data:
+                 destination = DestinationResponse(**dest_data)
+        return ScheduleEntryResponse(**existing_schedule, destination=destination)
+
+    # If destination is changing, verify it exists
+    if "destination_id" in update_data:
+        destination = await db.destinations.find_one({"_id": ObjectId(update_data["destination_id"])})
+        if not destination:
+            raise HTTPException(status_code=404, detail="Destination not found")
+            
+    # Update DB
+    await db.schedules.update_one(
+        {"_id": oid},
+        {"$set": update_data}
+    )
+    
+    # Fetch updated
+    updated_schedule_doc = await db.schedules.find_one({"_id": oid})
+    
+    # Enrich
+    dest_id = updated_schedule_doc.get("destination_id")
+    destination_resp = None
+    if dest_id:
+        dest_data = await db.destinations.find_one({"_id": ObjectId(dest_id)})
+        if dest_data:
+            destination_resp = DestinationResponse(**dest_data)
+            
+    # Trigger matching if critical fields changed
+    if any(k in update_data for k in ["destination_id", "pickup_time", "recurrence"]):
+         background_tasks.add_task(find_and_create_matches, str(oid))
+
+    return ScheduleEntryResponse(**updated_schedule_doc, destination=destination_resp)

@@ -1,14 +1,20 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from typing import List
 from bson import ObjectId
 from db import db
 from models import (
     UserInDB, TribeCreate, TribeResponse, TribeInDB,
-    TribeInvite, TribeMembershipInDB, TribeMemberResponse, UserResponse
+    TribeInvite, TribeMembershipInDB, TribeMemberResponse, UserResponse,
+    TribeMemberUpdate
 )
 from auth import get_current_user
 
 router = APIRouter()
+
+@router.get("/debug-ping")
+async def debug_ping():
+    return {"ping": "pong", "time": "now"}
 
 @router.get("/", response_model=List[TribeResponse])
 async def list_tribes(current_user: UserInDB = Depends(get_current_user)):
@@ -139,4 +145,119 @@ async def invite_member(
         trust_level=new_membership.trust_level,
         status=new_membership.status,
         joined_at=new_membership.created_at
+    )
+
+@router.delete("/{tribe_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_member(
+    tribe_id: str,
+    user_id: str,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    with open("debug_hit.txt", "w") as f:
+        f.write(f"HIT remove_member: tribe_id={tribe_id}, user_id={user_id}\n")
+    
+    print(f"DEBUG: remove_member HIT! tribe_id={tribe_id}, user_id={user_id}")
+    logging.info(f"DEBUG: remove_member called with tribe_id={tribe_id}, user_id={user_id}")
+    all_memberships = await db.tribe_memberships.find({"tribe_id": tribe_id}).to_list(100)
+    logging.info(f"DEBUG: All memberships for tribe {tribe_id}: {all_memberships}")
+    
+    # Check if tribe exists
+    try:
+        tribe = await db.tribes.find_one({"_id": ObjectId(tribe_id)})
+    except Exception as e:
+        logging.error(f"Invalid ObjectId for tribe: {e}")
+        raise HTTPException(status_code=404, detail=f"Invalid Tribe ID format: {tribe_id}")
+
+    if not tribe:
+        logging.warning(f"Tribe not found: {tribe_id}")
+        raise HTTPException(status_code=404, detail=f"Tribe not found: {tribe_id}")
+        
+    # Check if current user is owner
+    if tribe["owner_id"] != str(current_user.id):
+        logging.warning(f"User {current_user.id} is not owner of {tribe_id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the tribe owner can remove members"
+        )
+    
+    # Prevent removing self
+    if user_id == str(current_user.id):
+         raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Owner cannot be removed from tribe"
+        )
+
+    # Delete membership
+    # Try finding it first to confirm it exists
+    membership = await db.tribe_memberships.find_one({
+        "tribe_id": tribe_id,
+        "user_id": user_id
+    })
+    
+    if not membership:
+        logging.warning(f"Membership not found for user {user_id} in tribe {tribe_id}")
+        # DEBUG: Check if it exists with ObjectId matching?
+        # In case some records have ObjectId and some have str
+        
+        raise HTTPException(status_code=404, detail=f"Membership not found for user {user_id} in tribe {tribe_id}")
+
+    result = await db.tribe_memberships.delete_one({
+        "tribe_id": tribe_id,
+        "user_id": user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=500, detail="Failed to delete membership despite finding it")
+        
+    # Decrement member count
+    await db.tribes.update_one(
+        {"_id": ObjectId(tribe_id)},
+        {"$inc": {"member_count": -1}}
+    )
+    
+    return None
+
+@router.patch("/{tribe_id}/members/{user_id}", response_model=TribeMemberResponse)
+async def update_member_trust(
+    tribe_id: str,
+    user_id: str,
+    update: TribeMemberUpdate,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    # Check if tribe exists
+    tribe = await db.tribes.find_one({"_id": ObjectId(tribe_id)})
+    if not tribe:
+        raise HTTPException(status_code=404, detail="Tribe not found")
+        
+    # Check if current user is owner
+    if tribe["owner_id"] != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the tribe owner can update member trust levels"
+        )
+
+    # Find membership
+    membership = await db.tribe_memberships.find_one({
+        "tribe_id": tribe_id,
+        "user_id": user_id
+    })
+    
+    if not membership:
+        raise HTTPException(status_code=404, detail="Member not found in this tribe")
+
+    # Update trust level
+    await db.tribe_memberships.update_one(
+        {"_id": membership["_id"]},
+        {"$set": {"trust_level": update.trust_level}}
+    )
+    
+    # Fetch updated membership details for response
+    updated_membership = await db.tribe_memberships.find_one({"_id": membership["_id"]})
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    
+    return TribeMemberResponse(
+        user=UserResponse(**user),
+        trust_level=updated_membership["trust_level"],
+        status=updated_membership["status"],
+        joined_at=updated_membership["created_at"]
     )

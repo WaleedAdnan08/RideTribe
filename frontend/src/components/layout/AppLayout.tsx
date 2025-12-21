@@ -2,12 +2,25 @@
 
 import React, { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { LogOut, Users, CalendarDays, MapPin, Car, Home } from "lucide-react";
+import { LogOut, Users, CalendarDays, MapPin, Car, Home, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
 interface NavLinkProps {
   to: string;
@@ -34,7 +47,26 @@ const NavLink = ({ to, icon: Icon, label, isMobile }: NavLinkProps) => (
 
 const AppLayout = ({ children }: { children: ReactNode }) => {
   const { logout } = useAuth();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  const handleDeleteAccount = async () => {
+    try {
+      await api.delete("/auth/me");
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      logout();
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const navItems = [
     { to: "/", icon: Home, label: "Dashboard" },
@@ -57,7 +89,30 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
               <NavLink key={item.to} to={item.to} icon={item.icon} label={item.label} />
             ))}
           </nav>
-          <div className="mt-auto pt-4 border-t">
+          <div className="mt-auto pt-4 border-t space-y-1">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive">
+                  <Trash2 className="mr-2 h-5 w-5" />
+                  Delete Account
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your account
+                    and remove your data from our servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete Account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button onClick={logout} variant="ghost" className="w-full justify-start text-foreground hover:bg-primary/10 hover:text-primary">
               <LogOut className="mr-2 h-5 w-5" />
               Logout
@@ -86,7 +141,30 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
                     <NavLink key={item.to} to={item.to} icon={item.icon} label={item.label} isMobile />
                   ))}
                 </nav>
-                <div className="mt-auto pt-4 border-t">
+                <div className="mt-auto pt-4 border-t space-y-1">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2 className="mr-2 h-5 w-5" />
+                        Delete Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your account
+                          and remove your data from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete Account
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <Button onClick={logout} variant="ghost" className="w-full justify-start text-foreground hover:bg-primary/10 hover:text-primary">
                     <LogOut className="mr-2 h-5 w-5" />
                     Logout

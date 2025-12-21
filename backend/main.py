@@ -1,9 +1,43 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+import logging
+import time
 from db import db
 from routers import auth, destinations, tribes, schedules, matches
 
 app = FastAPI()
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("backend_requests.log")
+    ]
+)
+logger = logging.getLogger(__name__)
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    logger.info(f"Incoming request: {request.method} {request.url}")
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        logger.info(f"Request handled: {request.method} {request.url} - Status: {response.status_code} - Time: {process_time:.4f}s")
+        return response
+    except Exception as e:
+        logger.error(f"Request failed: {request.method} {request.url} - Error: {str(e)}")
+        raise e
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    if exc.status_code == 404:
+        logger.error(f"404 Error encountered: {request.method} {request.url}")
+        return await app.exception_handlers[StarletteHTTPException](request, exc) if StarletteHTTPException in app.exception_handlers else exc
+    return await app.exception_handlers[StarletteHTTPException](request, exc)
 
 origins = [
     "http://localhost:5173",
@@ -39,3 +73,5 @@ async def health_check():
     except Exception as e:
         return {"status": "error", "db": "disconnected", "detail": str(e)}
 # Trigger reload
+# Force reload - version 2
+logger.info("MAIN.PY RELOADED - VERSION 2")

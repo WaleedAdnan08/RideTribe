@@ -108,6 +108,8 @@ class TribeMemberResponse(BaseModel):
     trust_level: str
     status: str
     joined_at: datetime
+class TribeMemberUpdate(BaseModel):
+    trust_level: str
 
 class Token(BaseModel):
     access_token: str
@@ -131,6 +133,12 @@ class DestinationBase(BaseModel):
 
 class DestinationCreate(DestinationBase):
     pass
+class DestinationUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    google_place_id: Optional[str] = None
+    geo: Optional[Geo] = None
+    category: Optional[str] = None
 
 class DestinationInDB(DestinationBase):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
@@ -154,6 +162,13 @@ class DestinationResponse(DestinationBase):
 class ScheduleEntryBase(BaseModel):
     child_name: str
     destination_id: PyObjectId
+class ScheduleEntryUpdate(BaseModel):
+    child_name: Optional[str] = None
+    destination_id: Optional[PyObjectId] = None
+    pickup_time: Optional[datetime] = None
+    dropoff_time: Optional[datetime] = None
+    recurrence: Optional[str] = None
+    status: Optional[str] = None
     pickup_time: Optional[datetime] = None
     dropoff_time: Optional[datetime] = None
     recurrence: str = "once" # once, daily, weekly

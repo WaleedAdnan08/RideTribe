@@ -3,12 +3,22 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Phone, Loader2, Users } from "lucide-react";
+import { PlusCircle, Phone, Loader2, Users, Trash2, Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,6 +47,17 @@ const TribePage = () => {
     trustLevel: "direct" as TrustLevel
   });
 
+  // Edit Trust Level State
+  const [isEditTrustDialogOpen, setIsEditTrustDialogOpen] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState<{ tribeId: string; member: TribeMember } | null>(null);
+  const [newTrustLevel, setNewTrustLevel] = useState<TrustLevel>("direct");
+  const [isUpdatingTrust, setIsUpdatingTrust] = useState(false);
+
+  // Delete Member State
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<{ tribeId: string; member: TribeMember } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fetchTribes = async () => {
     try {
       setIsLoading(true);
@@ -53,7 +74,15 @@ const TribePage = () => {
       for (const tribe of data) {
         if (!tribe.id) continue;
         try {
-          const members = await tribeApi.getMembers(tribe.id);
+          const rawMembers = await tribeApi.getMembers(tribe.id);
+          // Ensure user.id is populated from _id if needed
+          const members = rawMembers.map((m: any) => ({
+            ...m,
+            user: {
+              ...m.user,
+              id: m.user.id || m.user._id
+            }
+          }));
           membersData[tribe.id] = members;
         } catch (err) {
           console.error(`Failed to fetch members for tribe ${tribe.id}`, err);
@@ -111,7 +140,16 @@ const TribePage = () => {
     try {
       setIsInviting(true);
       console.log("Calling tribeApi.invite...");
-      const newMember = await tribeApi.invite(selectedTribeId, inviteData.phoneNumber, inviteData.trustLevel);
+      const rawNewMember = await tribeApi.invite(selectedTribeId, inviteData.phoneNumber, inviteData.trustLevel);
+      // Ensure ID mapping for the new member
+      const newMember = {
+        ...rawNewMember,
+        user: {
+          ...rawNewMember.user,
+          id: rawNewMember.user.id || rawNewMember.user._id
+        }
+      };
+      
       console.log("Invite successful", newMember);
       toast({ title: "Success", description: "Invite sent successfully!" });
       
@@ -136,6 +174,86 @@ const TribePage = () => {
   };
 
   const openInviteDialog = (tribeId: string) => {
+    setSelectedTribeId(tribeId);
+    setIsInviteDialogOpen(true);
+  };
+
+  const openEditTrustDialog = (tribeId: string, member: TribeMember) => {
+    setMemberToEdit({ tribeId, member });
+    setNewTrustLevel(member.trust_level);
+    setIsEditTrustDialogOpen(true);
+  };
+
+  const handleUpdateTrust = async () => {
+    if (!memberToEdit) return;
+
+    try {
+      setIsUpdatingTrust(true);
+      await tribeApi.updateMemberTrust(memberToEdit.tribeId, memberToEdit.member.user.id, newTrustLevel);
+      
+      toast({ title: "Success", description: "Trust level updated successfully!" });
+      
+      // Update local state
+      setTribeMembers(prev => ({
+        ...prev,
+        [memberToEdit.tribeId]: prev[memberToEdit.tribeId].map(m =>
+          m.user.id === memberToEdit.member.user.id
+            ? { ...m, trust_level: newTrustLevel }
+            : m
+        )
+      }));
+      
+      setIsEditTrustDialogOpen(false);
+      setMemberToEdit(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update trust level.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingTrust(false);
+    }
+  };
+
+  const confirmDeleteMember = (tribeId: string, member: TribeMember) => {
+    setMemberToDelete({ tribeId, member });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteMember = async () => {
+    if (!memberToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      const userId = memberToDelete.member.user.id || memberToDelete.member.user._id;
+      if (!userId) {
+        throw new Error("User ID is missing");
+      }
+      console.log(`Deleting member ${userId} from tribe ${memberToDelete.tribeId}`);
+      await tribeApi.removeMember(memberToDelete.tribeId, userId);
+      
+      toast({ title: "Success", description: "Member removed successfully!" });
+      
+      // Update local state
+      setTribeMembers(prev => ({
+        ...prev,
+        [memberToDelete.tribeId]: prev[memberToDelete.tribeId].filter(
+          m => (m.user.id || m.user._id) !== (memberToDelete.member.user.id || memberToDelete.member.user._id)
+        )
+      }));
+      
+      setIsDeleteDialogOpen(false);
+      setMemberToDelete(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove member.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
     setSelectedTribeId(tribeId);
     setIsInviteDialogOpen(true);
   };
@@ -225,6 +343,9 @@ const TribePage = () => {
                       <TableHead>Phone Number</TableHead>
                       <TableHead>Trust Level</TableHead>
                       <TableHead className="text-right">Status</TableHead>
+                      {tribe.owner_id === currentUser?.id && (
+                        <TableHead className="text-right">Actions</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -236,8 +357,10 @@ const TribePage = () => {
                           </Avatar>
                         </TableCell>
                         <TableCell className="font-medium">{member.user.name}</TableCell>
-                        <TableCell className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-muted-foreground" /> {member.user.phone}
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3 text-muted-foreground" /> {member.user.phone}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={getTrustLevelVariant(member.trust_level)}>
@@ -249,6 +372,32 @@ const TribePage = () => {
                             {member.status}
                           </Badge>
                         </TableCell>
+                        {tribe.owner_id === currentUser?.id && (
+                          <TableCell className="text-right">
+                            {member.user.id !== tribe.owner_id && (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                  onClick={() => openEditTrustDialog(tribe.id, member)}
+                                  title="Edit Trust Level"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => confirmDeleteMember(tribe.id, member)}
+                                  title="Remove Member"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -319,6 +468,72 @@ const TribePage = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Trust Level Dialog */}
+      <Dialog open={isEditTrustDialogOpen} onOpenChange={setIsEditTrustDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Trust Level</DialogTitle>
+            <DialogDescription>
+              Change the trust level for {memberToEdit?.member.user.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-trust" className="text-right">Trust Level</Label>
+              <Select
+                value={newTrustLevel}
+                onValueChange={(val: TrustLevel) => setNewTrustLevel(val)}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select trust level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="direct">Direct (High Trust)</SelectItem>
+                  <SelectItem value="activity-specific">Activity Specific</SelectItem>
+                  <SelectItem value="emergency-only">Emergency Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditTrustDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateTrust} disabled={isUpdatingTrust}>
+              {isUpdatingTrust && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {memberToDelete?.member.user.name} from this tribe?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault(); // Prevent auto-close
+                handleDeleteMember();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
