@@ -17,9 +17,30 @@ async def find_and_create_matches(schedule_id: str):
     pickup_time = new_schedule.get("pickup_time")
     
     if not pickup_time:
-        # If no specific time (e.g. only date or loose recurrence), matching might be harder.
-        # For MVP, let's assume specific pickup_time is key for matching.
         return
+
+    # Fetch destination to check for google_place_id
+    destination = await db.destinations.find_one({"_id": ObjectId(destination_id)})
+    if not destination:
+        print(f"Destination {destination_id} not found")
+        return
+
+    # Find all compatible destination IDs (same place)
+    target_destination_ids = [destination_id]
+    
+    if destination.get("google_place_id"):
+        # 1. Try matching by Google Place ID
+        same_place_dests = await db.destinations.find({
+            "google_place_id": destination["google_place_id"]
+        }).to_list(100)
+        target_destination_ids = [str(d["_id"]) for d in same_place_dests]
+    else:
+        # 2. Fallback: Match by Name (for manual entries or when Place ID is missing)
+        # This allows "School" matches even if created manually by different users
+        same_place_dests = await db.destinations.find({
+            "name": destination["name"]
+        }).to_list(100)
+        target_destination_ids = [str(d["_id"]) for d in same_place_dests]
 
     # 2. Find tribes the user belongs to
     user_memberships = await db.tribe_memberships.find({"user_id": user_id}).to_list(100)
@@ -52,7 +73,7 @@ async def find_and_create_matches(schedule_id: str):
     
     matching_schedules = await db.schedules.find({
         "user_id": {"$in": potential_partner_ids},
-        "destination_id": destination_id,
+        "destination_id": {"$in": target_destination_ids},
         "pickup_time": {"$gte": min_time, "$lte": max_time},
         "status": "active"
     }).to_list(100)

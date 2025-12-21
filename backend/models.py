@@ -162,6 +162,11 @@ class DestinationResponse(DestinationBase):
 class ScheduleEntryBase(BaseModel):
     child_name: str
     destination_id: PyObjectId
+    pickup_time: datetime
+    dropoff_time: Optional[datetime] = None
+    recurrence: str = "once"
+    status: str = "active"
+
 class ScheduleEntryUpdate(BaseModel):
     child_name: Optional[str] = None
     destination_id: Optional[PyObjectId] = None
@@ -169,10 +174,6 @@ class ScheduleEntryUpdate(BaseModel):
     dropoff_time: Optional[datetime] = None
     recurrence: Optional[str] = None
     status: Optional[str] = None
-    pickup_time: Optional[datetime] = None
-    dropoff_time: Optional[datetime] = None
-    recurrence: str = "once" # once, daily, weekly
-    status: str = "active"
 
 class ScheduleEntryCreate(ScheduleEntryBase):
     pass

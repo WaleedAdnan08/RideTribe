@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { PlaceAutocomplete } from "@/components/ui/PlaceAutocomplete";
 import api, { destinationsApi } from "@/lib/api";
-import { Destination } from "@/types";
+import { Destination, Geo } from "@/types";
 
 const DestinationsPage = () => {
   const { currentUser } = useAuth();
@@ -25,7 +26,13 @@ const DestinationsPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    address: string;
+    category: string;
+    google_place_id?: string;
+    geo?: Geo;
+  }>({
     name: "",
     address: "",
     category: "Activity",
@@ -73,9 +80,24 @@ const DestinationsPage = () => {
       name: dest.name,
       address: dest.address,
       category: dest.category || "Activity",
+      google_place_id: dest.google_place_id,
+      geo: dest.geo
     });
     setEditingId(dest.id || dest._id || null);
     setIsDialogOpen(true);
+  };
+
+  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
+    setFormData(prev => ({
+      ...prev,
+      address: place.formatted_address || prev.address,
+      name: (!prev.name && place.name) ? place.name : prev.name, // Auto-fill name if empty
+      google_place_id: place.place_id,
+      geo: place.geometry?.location ? {
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng()
+      } : undefined
+    }));
   };
 
   const handleCreateClick = () => {
@@ -192,11 +214,12 @@ const DestinationsPage = () => {
                     <Label htmlFor="address" className="text-right">
                       Address
                     </Label>
-                    <Input
+                    <PlaceAutocomplete
                       id="address"
                       name="address"
                       value={formData.address}
                       onChange={handleInputChange}
+                      onPlaceSelect={handlePlaceSelect}
                       placeholder="e.g. 123 School Ln"
                       className="col-span-3"
                     />

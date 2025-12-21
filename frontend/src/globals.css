@@ -98,3 +98,7 @@
     @apply font-semibold; /* Ensure headings are bold */
   }
 }
+/* Ensure Google Places Autocomplete shows above modals */
+.pac-container {
+  z-index: 1050 !important; /* Standard modal z-index */
+}
