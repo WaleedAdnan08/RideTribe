@@ -30,7 +30,8 @@ const SchedulePage = () => {
   const [formData, setFormData] = useState({
     child_name: "",
     destination_id: "",
-    pickup_time: "", // We'll use datetime-local input
+    pickup_date: "",
+    pickup_time_part: "",
     recurrence: "once"
   });
 
@@ -63,26 +64,29 @@ const SchedulePage = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.child_name || !formData.destination_id || !formData.pickup_time) {
+    if (!formData.child_name || !formData.destination_id || !formData.pickup_date || !formData.pickup_time_part) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      // Format ISO string from local datetime
-      const date = new Date(formData.pickup_time);
+      // Format ISO string from local date and time
+      const dateTimeString = `${formData.pickup_date}T${formData.pickup_time_part}`;
+      const date = new Date(dateTimeString);
       const isoDate = date.toISOString();
 
+      const { pickup_date, pickup_time_part, ...submitData } = formData;
+
       await schedulesApi.create({
-        ...formData,
+        ...submitData,
         pickup_time: isoDate,
         dropoff_time: isoDate // Simplified for MVP: dropoff same as pickup or calculated
       });
 
       toast({ title: "Success", description: "Trip scheduled successfully!" });
       setIsDialogOpen(false);
-      setFormData({ child_name: "", destination_id: "", pickup_time: "", recurrence: "once" });
+      setFormData({ child_name: "", destination_id: "", pickup_date: "", pickup_time_part: "", recurrence: "once" });
       fetchData();
     } catch (error: any) {
       toast({
@@ -144,38 +148,54 @@ const SchedulePage = () => {
                     <Label className="text-right">Child Name</Label>
                     <Input
                       value={formData.child_name}
-                      onChange={e => setFormData({...formData, child_name: e.target.value})}
+                      onChange={e => setFormData(prev => ({...prev, child_name: e.target.value}))}
                       className="col-span-3"
                       placeholder="e.g. Leo"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right">Destination</Label>
-                    <Select onValueChange={val => setFormData({...formData, destination_id: val})}>
+                    <Select
+                      value={formData.destination_id}
+                      onValueChange={val => setFormData(prev => ({...prev, destination_id: val}))}
+                    >
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Select destination" />
                       </SelectTrigger>
                       <SelectContent>
-                        {destinations.map(d => (
-                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                        ))}
+                        {destinations.map(d => {
+                          const id = d.id || d._id;
+                          if (!id) return null;
+                          return (
+                            <SelectItem key={id} value={id}>{d.name}</SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Date</Label>
+                    <Input
+                      type="date"
+                      className="col-span-3"
+                      value={formData.pickup_date}
+                      onChange={e => setFormData(prev => ({...prev, pickup_date: e.target.value}))}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right">Time</Label>
                     <Input
-                      type="datetime-local"
+                      type="time"
                       className="col-span-3"
-                      value={formData.pickup_time}
-                      onChange={e => setFormData({...formData, pickup_time: e.target.value})}
+                      value={formData.pickup_time_part}
+                      onChange={e => setFormData(prev => ({...prev, pickup_time_part: e.target.value}))}
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right">Recurrence</Label>
                     <Select
-                      defaultValue="once"
-                      onValueChange={val => setFormData({...formData, recurrence: val})}
+                      value={formData.recurrence}
+                      onValueChange={val => setFormData(prev => ({...prev, recurrence: val}))}
                     >
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Frequency" />
