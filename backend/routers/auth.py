@@ -1,4 +1,5 @@
 from datetime import timedelta
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from config import settings
 from db import db
@@ -102,6 +103,6 @@ async def delete_me(current_user: UserInDB = Depends(get_current_user)):
         await db.tribes.delete_many({"owner_id": user_id})
 
     # 2. Delete the user
-    await db.users.delete_one({"_id": current_user.id})
+    await db.users.delete_one({"_id": ObjectId(user_id)})
     
     return None

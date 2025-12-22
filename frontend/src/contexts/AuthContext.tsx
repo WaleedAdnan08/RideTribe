@@ -78,19 +78,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signup = async (name: string, phoneNumber: string, password: string) => {
     try {
-      const response = await api.post<AuthResponse>("/auth/signup", { name, phone: phoneNumber, password });
+      await api.post<AuthResponse>("/auth/signup", { name, phone: phoneNumber, password });
       
-      const loggedInUser: User = {
-        ...response.user,
-        id: response.user._id || response.user.id,
-        phoneNumber: response.user.phone
-      };
-      
-      sessionStorage.setItem("authToken", response.access_token);
-      setCurrentUser(loggedInUser);
-      setIsLoggedIn(true);
-      showSuccess("Account created successfully!");
-      navigate("/");
+      showSuccess("Account created successfully! Please log in.");
+      navigate("/login");
     } catch (error: any) {
       console.error("AuthContext: Signup error:", error);
       showError(error.message || "Failed to create account.");
