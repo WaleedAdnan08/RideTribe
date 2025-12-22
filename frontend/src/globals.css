@@ -100,5 +100,6 @@
 }
 /* Ensure Google Places Autocomplete shows above modals */
 .pac-container {
-  z-index: 1050 !important; /* Standard modal z-index */
+  z-index: 9999 !important; /* Ensure it's above everything including dialogs and toasts */
+  pointer-events: auto !important; /* Allow clicks even if modal blocks outside interactions */
 }

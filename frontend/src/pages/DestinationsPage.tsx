@@ -188,7 +188,23 @@ const DestinationsPage = () => {
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Destination
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent
+              className="sm:max-w-[425px]"
+              onInteractOutside={(e) => {
+                const target = e.target as HTMLElement;
+                // Check if the click is inside a Google Maps Autocomplete container
+                // pac-container is the class for the dropdown
+                // pac-item is the class for individual items
+                if (
+                  target.closest('.pac-container') ||
+                  target.closest('.pac-item') ||
+                  target.classList.contains('pac-container') ||
+                  target.classList.contains('pac-item')
+                ) {
+                  e.preventDefault();
+                }
+              }}
+            >
               <DialogHeader>
                 <DialogTitle>{editingId ? "Edit Destination" : "Add Destination"}</DialogTitle>
                 <DialogDescription>
