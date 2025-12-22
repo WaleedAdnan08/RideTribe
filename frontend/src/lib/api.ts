@@ -36,8 +36,18 @@ async function request<T>(endpoint: string, method: RequestMethod, options: ApiR
   }
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.detail || response.statusText || 'API request failed');
+    let errorMessage = response.statusText || 'API request failed';
+    try {
+      const errorBody = await response.json();
+      if (errorBody.detail) {
+        errorMessage = typeof errorBody.detail === 'string'
+          ? errorBody.detail
+          : JSON.stringify(errorBody.detail);
+      }
+    } catch (e) {
+      // Failed to parse JSON, use default errorMessage
+    }
+    throw new Error(errorMessage);
   }
 
   if (response.status === 204) {

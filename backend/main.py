@@ -32,13 +32,6 @@ async def log_requests(request: Request, call_next):
         logger.error(f"Request failed: {request.method} {request.url} - Error: {str(e)}")
         raise e
 
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request, exc):
-    if exc.status_code == 404:
-        logger.error(f"404 Error encountered: {request.method} {request.url}")
-        return await app.exception_handlers[StarletteHTTPException](request, exc) if StarletteHTTPException in app.exception_handlers else exc
-    return await app.exception_handlers[StarletteHTTPException](request, exc)
-
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
