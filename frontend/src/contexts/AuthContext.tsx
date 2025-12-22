@@ -15,6 +15,7 @@ interface AuthResponse {
 interface AuthContextType {
   currentUser: User | null;
   isLoggedIn: boolean;
+  isLoading: boolean;
   login: (phoneNumber: string, password: string) => Promise<void>;
   signup: (name: string, phoneNumber: string, password: string) => Promise<void>;
   logout: () => void;
@@ -25,11 +26,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
-      const storedToken = localStorage.getItem("authToken");
+      const storedToken = sessionStorage.getItem("authToken");
       if (storedToken) {
         try {
           const user = await api.get<any>("/auth/me");
@@ -42,7 +44,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error) {
           console.error("AuthContext: Error checking auth:", error);
           logout(); // Invalid token, so logout
+        } finally {
+          setIsLoading(false);
         }
+      } else {
+        setIsLoading(false);
       }
     };
     checkAuth();
@@ -58,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         phoneNumber: response.user.phone
       };
       
-      localStorage.setItem("authToken", response.access_token);
+      sessionStorage.setItem("authToken", response.access_token);
       setCurrentUser(loggedInUser);
       setIsLoggedIn(true);
       showSuccess("Logged in successfully!");
@@ -80,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         phoneNumber: response.user.phone
       };
       
-      localStorage.setItem("authToken", response.access_token);
+      sessionStorage.setItem("authToken", response.access_token);
       setCurrentUser(loggedInUser);
       setIsLoggedIn(true);
       showSuccess("Account created successfully!");
@@ -95,13 +101,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setCurrentUser(null);
     setIsLoggedIn(false);
-    localStorage.removeItem("authToken");
+    sessionStorage.removeItem("authToken");
     showSuccess("Logged out successfully.");
     navigate("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoggedIn, login, signup, logout }}>
+    <AuthContext.Provider value={{ currentUser, isLoggedIn, isLoading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

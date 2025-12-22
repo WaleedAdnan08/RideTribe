@@ -9,7 +9,7 @@ interface ApiRequestOptions extends RequestInit {
 async function request<T>(endpoint: string, method: RequestMethod, options: ApiRequestOptions = {}): Promise<T> {
   const { data, headers, ...customConfig } = options;
 
-  const token = localStorage.getItem('authToken');
+  const token = sessionStorage.getItem('authToken');
 
   const config: RequestInit = {
     method,

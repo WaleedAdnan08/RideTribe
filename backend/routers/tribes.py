@@ -29,8 +29,12 @@ async def list_tribes(current_user: UserInDB = Depends(get_current_user)):
     tribes = await db.tribes.find({"_id": {"$in": tribe_ids}}).to_list(100)
     return tribes
 
+from fastapi import Request
+
 @router.post("/", response_model=TribeResponse)
-async def create_tribe(tribe: TribeCreate, current_user: UserInDB = Depends(get_current_user)):
+async def create_tribe(tribe: TribeCreate, request: Request, current_user: UserInDB = Depends(get_current_user)):
+    print(f"DEBUG: create_tribe called. Name: {tribe.name}, User: {current_user.phone}")
+    print(f"DEBUG: Request headers: {request.headers}")
     # Create tribe document
     tribe_in_db = TribeInDB(
         name=tribe.name,
