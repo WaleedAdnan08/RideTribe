@@ -12,8 +12,45 @@ import { format, parseISO } from "date-fns";
 import { matchesApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Map } from "@/components/ui/Map";
-import { AdvancedMarker, Pin, InfoWindow } from "@vis.gl/react-google-maps";
+import { AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 import { RideMatch, RideMatchStatus } from "@/types";
+
+const MapBoundsUpdater = ({ matches }: { matches: RideMatch[] }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || matches.length === 0) return;
+
+    const bounds = new google.maps.LatLngBounds();
+    let hasValidPoints = false;
+
+    matches.forEach(match => {
+      const dest = match.schedule?.destination;
+      const position = dest?.geo ? dest.geo :
+        (dest?.latitude && dest?.longitude) ? { lat: dest.latitude, lng: dest.longitude } :
+          null;
+
+      if (position) {
+        bounds.extend(position);
+        hasValidPoints = true;
+      }
+    });
+
+    if (hasValidPoints) {
+      map.fitBounds(bounds);
+      
+      // If there's only one point, zoom out a bit so it's not too close
+      if (matches.length === 1) {
+         // Use a timeout to ensure fitBounds has finished before overriding zoom
+         setTimeout(() => {
+           map.setZoom(14);
+         }, 100);
+      }
+    }
+  }, [map, matches]);
+
+  return null;
+};
 
 const RideMatchesPage = () => {
   const { currentUser } = useAuth();
@@ -190,6 +227,7 @@ const RideMatchesPage = () => {
                 <TabsContent value="map">
                   <div className="h-[600px] w-full rounded-md overflow-hidden border">
                     <Map defaultCenter={{ lat: 34.0522, lng: -118.2437 }} defaultZoom={10}>
+                      <MapBoundsUpdater matches={matches} />
                       {matches.map(match => {
                         const dest = match.schedule?.destination;
                         const position = dest?.geo ? dest.geo :
@@ -204,7 +242,9 @@ const RideMatchesPage = () => {
                             position={position}
                             onClick={() => setSelectedMatch(match)}
                           >
-                            <Pin background={"#2563eb"} glyphColor={"#fff"} borderColor={"#1e40af"} />
+                            <div className="relative flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
+                              <MapPin className="h-10 w-10 text-blue-600 fill-white drop-shadow-md" />
+                            </div>
                           </AdvancedMarker>
                         );
                       })}
