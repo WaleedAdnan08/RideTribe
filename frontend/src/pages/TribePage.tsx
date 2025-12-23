@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Phone, Loader2, Users, Trash2, Pencil } from "lucide-react";
+import { PlusCircle, Phone, Loader2, Users, Trash2, Pencil, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ const TribePage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<{ tribeId: string; member: TribeMember } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchTribes = async () => {
     try {
@@ -254,8 +255,6 @@ const TribePage = () => {
     } finally {
       setIsDeleting(false);
     }
-    setSelectedTribeId(tribeId);
-    setIsInviteDialogOpen(true);
   };
 
   const getTrustLevelVariant = (level: TrustLevel) => {
@@ -323,88 +322,106 @@ const TribePage = () => {
         </div>
       ) : tribes.length > 0 ? (
         <div className="space-y-8">
-          {tribes.map(tribe => (
-            <Card key={tribe.id}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="flex flex-col space-y-1.5">
-                  <CardTitle className="text-xl">{tribe.name}</CardTitle>
-                  <CardDescription>{tribeMembers[tribe.id]?.length || 0} members</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => openInviteDialog(tribe.id)}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Invite Member
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">Member</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Phone Number</TableHead>
-                      <TableHead>Trust Level</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
-                      {tribe.owner_id === currentUser?.id && (
-                        <TableHead className="text-right">Actions</TableHead>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tribeMembers[tribe.id]?.map((member, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>{member.user.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell className="font-medium">{member.user.name}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3 text-muted-foreground" /> {member.user.phone}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getTrustLevelVariant(member.trust_level)}>
-                            {member.trust_level.replace(/-/g, ' ')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={getStatusVariant(member.status)}>
-                            {member.status}
-                          </Badge>
-                        </TableCell>
+          <div className="flex items-center space-x-2 mb-4">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search members by name or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          {tribes.map(tribe => {
+            const filteredMembers = tribeMembers[tribe.id]?.filter(member =>
+              member.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              member.user.phone.includes(searchQuery)
+            ) || [];
+
+            if (searchQuery && filteredMembers.length === 0) return null;
+
+            return (
+              <Card key={tribe.id}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="flex flex-col space-y-1.5">
+                    <CardTitle className="text-xl">{tribe.name}</CardTitle>
+                    <CardDescription>{tribeMembers[tribe.id]?.length || 0} members</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => openInviteDialog(tribe.id)}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Invite Member
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]">Member</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Phone Number</TableHead>
+                        <TableHead>Trust Level</TableHead>
+                        <TableHead className="text-right">Status</TableHead>
                         {tribe.owner_id === currentUser?.id && (
-                          <TableCell className="text-right">
-                            {member.user.id !== tribe.owner_id && (
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                  onClick={() => openEditTrustDialog(tribe.id, member)}
-                                  title="Edit Trust Level"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => confirmDeleteMember(tribe.id, member)}
-                                  title="Remove Member"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </TableCell>
+                          <TableHead className="text-right">Actions</TableHead>
                         )}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ))}
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMembers.map((member, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>{member.user.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                          </TableCell>
+                          <TableCell className="font-medium">{member.user.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-muted-foreground" /> {member.user.phone}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getTrustLevelVariant(member.trust_level)}>
+                              {member.trust_level.replace(/-/g, ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={getStatusVariant(member.status)}>
+                              {member.status}
+                            </Badge>
+                          </TableCell>
+                          {tribe.owner_id === currentUser?.id && (
+                            <TableCell className="text-right">
+                              {member.user.id !== tribe.owner_id && (
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    onClick={() => openEditTrustDialog(tribe.id, member)}
+                                    title="Edit Trust Level"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    onClick={() => confirmDeleteMember(tribe.id, member)}
+                                    title="Remove Member"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card>

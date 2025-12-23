@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarPlus, MapPin, Clock, Repeat, Loader2, Trash2, Pencil } from "lucide-react";
+import { CalendarPlus, MapPin, Clock, Repeat, Loader2, Trash2, Pencil, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ const SchedulePage = () => {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Create Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -340,6 +341,16 @@ const SchedulePage = () => {
             </DialogContent>
           </Dialog>
 
+          <div className="flex items-center space-x-2 mb-4">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by child, destination, or time..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
           {isLoading ? (
              <div className="flex justify-center p-8">
                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -357,7 +368,19 @@ const SchedulePage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {schedules.map(entry => {
+                {schedules.filter(entry => {
+                  const destination = entry.destination;
+                  const pickupTime = entry.pickup_time ? parseISO(entry.pickup_time) : new Date();
+                  const timeStr = format(pickupTime, "MMM dd, hh:mm a").toLowerCase();
+                  const query = searchQuery.toLowerCase();
+                  
+                  return (
+                    entry.child_name.toLowerCase().includes(query) ||
+                    (destination?.name || "").toLowerCase().includes(query) ||
+                    (destination?.address || "").toLowerCase().includes(query) ||
+                    timeStr.includes(query)
+                  );
+                }).map(entry => {
                   // entry.destination is enriched by backend
                   const destination = entry.destination;
                   const pickupTime = entry.pickup_time ? parseISO(entry.pickup_time) : new Date();
