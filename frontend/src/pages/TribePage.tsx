@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Phone, Loader2, Users, Trash2, Pencil, Search } from "lucide-react";
+import { PlusCircle, Phone, Loader2, Users, Trash2, Pencil, Search, ShieldCheck, ShieldAlert, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -63,20 +63,17 @@ const TribePage = () => {
     try {
       setIsLoading(true);
       const rawData = await tribeApi.list();
-      // Map _id to id if necessary
       const data = rawData.map((t: any) => ({
         ...t,
         id: t.id || t._id
       }));
       setTribes(data);
       
-      // Fetch members for each tribe
       const membersData: Record<string, TribeMember[]> = {};
       for (const tribe of data) {
         if (!tribe.id) continue;
         try {
           const rawMembers = await tribeApi.getMembers(tribe.id);
-          // Ensure user.id is populated from _id if needed
           const members = rawMembers.map((m: any) => ({
             ...m,
             user: {
@@ -132,17 +129,11 @@ const TribePage = () => {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("handleInvite called", { selectedTribeId, inviteData });
-    if (!selectedTribeId || !inviteData.phoneNumber) {
-      console.warn("Missing required data for invite", { selectedTribeId, phoneNumber: inviteData.phoneNumber });
-      return;
-    }
+    if (!selectedTribeId || !inviteData.phoneNumber) return;
 
     try {
       setIsInviting(true);
-      console.log("Calling tribeApi.invite...");
       const rawNewMember = await tribeApi.invite(selectedTribeId, inviteData.phoneNumber, inviteData.trustLevel);
-      // Ensure ID mapping for the new member
       const newMember = {
         ...rawNewMember,
         user: {
@@ -151,10 +142,8 @@ const TribePage = () => {
         }
       };
       
-      console.log("Invite successful", newMember);
       toast({ title: "Success", description: "Invite sent successfully!" });
       
-      // Optimistically update the UI with the new member from the response
       setTribeMembers(prev => ({
         ...prev,
         [selectedTribeId]: [...(prev[selectedTribeId] || []), newMember]
@@ -163,10 +152,9 @@ const TribePage = () => {
       setIsInviteDialogOpen(false);
       setInviteData({ phoneNumber: "", trustLevel: "direct" });
     } catch (error: any) {
-      console.error("Invite failed", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to invite member. Make sure they are registered.",
+        description: error.message || "Failed to invite member.",
         variant: "destructive",
       });
     } finally {
@@ -194,7 +182,6 @@ const TribePage = () => {
       
       toast({ title: "Success", description: "Trust level updated successfully!" });
       
-      // Update local state
       setTribeMembers(prev => ({
         ...prev,
         [memberToEdit.tribeId]: prev[memberToEdit.tribeId].map(m =>
@@ -228,19 +215,14 @@ const TribePage = () => {
     try {
       setIsDeleting(true);
       const userId = memberToDelete.member.user.id || memberToDelete.member.user._id;
-      if (!userId) {
-        throw new Error("User ID is missing");
-      }
-      console.log(`Deleting member ${userId} from tribe ${memberToDelete.tribeId}`);
       await tribeApi.removeMember(memberToDelete.tribeId, userId);
       
       toast({ title: "Success", description: "Member removed successfully!" });
       
-      // Update local state
       setTribeMembers(prev => ({
         ...prev,
         [memberToDelete.tribeId]: prev[memberToDelete.tribeId].filter(
-          m => (m.user.id || m.user._id) !== (memberToDelete.member.user.id || memberToDelete.member.user._id)
+          m => (m.user.id || m.user._id) !== userId
         )
       }));
       
@@ -257,12 +239,12 @@ const TribePage = () => {
     }
   };
 
-  const getTrustLevelVariant = (level: TrustLevel) => {
+  const getTrustIcon = (level: TrustLevel) => {
     switch (level) {
-      case "direct": return "default";
-      case "activity-specific": return "secondary";
-      case "emergency-only": return "outline";
-      default: return "secondary";
+      case "direct": return <ShieldCheck className="h-4 w-4 text-green-600" />;
+      case "activity-specific": return <Shield className="h-4 w-4 text-blue-600" />;
+      case "emergency-only": return <ShieldAlert className="h-4 w-4 text-amber-600" />;
+      default: return null;
     }
   };
 
@@ -276,13 +258,16 @@ const TribePage = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Tribes</h1>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Tribes</h1>
+          <p className="text-muted-foreground mt-1">Manage your trusted carpooling circles.</p>
+        </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Create New Tribe
+            <Button size="lg" className="shadow-lg shadow-primary/20">
+              <PlusCircle className="mr-2 h-5 w-5" /> Create New Tribe
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -294,14 +279,13 @@ const TribePage = () => {
             </DialogHeader>
             <form onSubmit={handleCreateTribe}>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Name</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Tribe Name</Label>
                   <Input
                     id="name"
                     value={newTribeName}
                     onChange={(e) => setNewTribeName(e.target.value)}
                     placeholder="e.g. Neighborhood Carpool"
-                    className="col-span-3"
                   />
                 </div>
               </div>
@@ -317,20 +301,21 @@ const TribePage = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="flex justify-center p-12">
+          <Loader2 className="h-10 w-10 animate-spin text-primary/50" />
         </div>
       ) : tribes.length > 0 ? (
         <div className="space-y-8">
-          <div className="flex items-center space-x-2 mb-4">
-            <Search className="w-4 h-4 text-muted-foreground" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search members by name or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-sm"
+              className="pl-9 max-w-sm bg-background/50 backdrop-blur-sm"
             />
           </div>
+          
           {tribes.map(tribe => {
             const filteredMembers = tribeMembers[tribe.id]?.filter(member =>
               member.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -340,62 +325,68 @@ const TribePage = () => {
             if (searchQuery && filteredMembers.length === 0) return null;
 
             return (
-              <Card key={tribe.id}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="flex flex-col space-y-1.5">
-                    <CardTitle className="text-xl">{tribe.name}</CardTitle>
+              <Card key={tribe.id} className="overflow-hidden border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 bg-secondary/30">
+                  <div className="space-y-1">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                       <Users className="h-5 w-5 text-primary" />
+                       {tribe.name}
+                    </CardTitle>
                     <CardDescription>{tribeMembers[tribe.id]?.length || 0} members</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => openInviteDialog(tribe.id)}>
+                  <Button variant="outline" size="sm" onClick={() => openInviteDialog(tribe.id)} className="border-dashed border-primary/30 text-primary hover:bg-primary/5">
                     <PlusCircle className="mr-2 h-4 w-4" /> Invite Member
                   </Button>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[50px]">Member</TableHead>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-[80px] pl-6">Avatar</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Phone Number</TableHead>
+                        <TableHead>Contact</TableHead>
                         <TableHead>Trust Level</TableHead>
                         <TableHead className="text-right">Status</TableHead>
                         {tribe.owner_id === currentUser?.id && (
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead className="text-right pr-6">Actions</TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredMembers.map((member, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback>{member.user.name.charAt(0)}</AvatarFallback>
+                        <TableRow key={index} className="group hover:bg-muted/50">
+                          <TableCell className="pl-6">
+                            <Avatar className="h-9 w-9 border-2 border-background shadow-sm group-hover:border-primary/20 transition-colors">
+                              <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                                {member.user.name.charAt(0)}
+                              </AvatarFallback>
                             </Avatar>
                           </TableCell>
                           <TableCell className="font-medium">{member.user.name}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3 text-muted-foreground" /> {member.user.phone}
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Phone className="h-3 w-3" /> {member.user.phone}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getTrustLevelVariant(member.trust_level)}>
-                              {member.trust_level.replace(/-/g, ' ')}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                                {getTrustIcon(member.trust_level)}
+                                <span className="capitalize text-sm">{member.trust_level.replace(/-/g, ' ')}</span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Badge variant={getStatusVariant(member.status)}>
+                            <Badge variant={getStatusVariant(member.status)} className="capitalize shadow-sm">
                               {member.status}
                             </Badge>
                           </TableCell>
                           {tribe.owner_id === currentUser?.id && (
-                            <TableCell className="text-right">
+                            <TableCell className="text-right pr-6">
                               {member.user.id !== tribe.owner_id && (
-                                <div className="flex justify-end gap-2">
+                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
                                     onClick={() => openEditTrustDialog(tribe.id, member)}
                                     title="Edit Trust Level"
                                   >
@@ -404,7 +395,7 @@ const TribePage = () => {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                     onClick={() => confirmDeleteMember(tribe.id, member)}
                                     title="Remove Member"
                                   >
@@ -424,10 +415,12 @@ const TribePage = () => {
           })}
         </div>
       ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Tribes Yet</h3>
+        <Card className="border-dashed border-2 bg-secondary/10">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="p-4 bg-primary/10 rounded-full mb-4">
+               <Users className="h-10 w-10 text-primary" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">No Tribes Yet</h3>
             <p className="text-muted-foreground mb-6 max-w-sm">
               Create a tribe to start managing your trusted drivers and carpooling groups.
             </p>
@@ -449,29 +442,43 @@ const TribePage = () => {
           </DialogHeader>
           <form onSubmit={handleInvite}>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">Phone</Label>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
                   value={inviteData.phoneNumber}
                   onChange={(e) => setInviteData({ ...inviteData, phoneNumber: e.target.value })}
                   placeholder="+1234567890"
-                  className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="trust" className="text-right">Trust Level</Label>
+              <div className="space-y-2">
+                <Label htmlFor="trust">Trust Level</Label>
                 <Select 
                   value={inviteData.trustLevel} 
                   onValueChange={(val: TrustLevel) => setInviteData({ ...inviteData, trustLevel: val })}
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select trust level" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="direct">Direct (High Trust)</SelectItem>
-                    <SelectItem value="activity-specific">Activity Specific</SelectItem>
-                    <SelectItem value="emergency-only">Emergency Only</SelectItem>
+                    <SelectItem value="direct">
+                        <div className="flex items-center gap-2">
+                             <ShieldCheck className="w-4 h-4 text-green-500" />
+                             <span>Direct (High Trust)</span>
+                        </div>
+                    </SelectItem>
+                    <SelectItem value="activity-specific">
+                        <div className="flex items-center gap-2">
+                             <Shield className="w-4 h-4 text-blue-500" />
+                             <span>Activity Specific</span>
+                        </div>
+                    </SelectItem>
+                    <SelectItem value="emergency-only">
+                        <div className="flex items-center gap-2">
+                             <ShieldAlert className="w-4 h-4 text-amber-500" />
+                             <span>Emergency Only</span>
+                        </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -496,19 +503,19 @@ const TribePage = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-trust" className="text-right">Trust Level</Label>
+            <div className="space-y-2">
+              <Label htmlFor="edit-trust">Trust Level</Label>
               <Select
                 value={newTrustLevel}
                 onValueChange={(val: TrustLevel) => setNewTrustLevel(val)}
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger>
                   <SelectValue placeholder="Select trust level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="direct">Direct (High Trust)</SelectItem>
-                  <SelectItem value="activity-specific">Activity Specific</SelectItem>
-                  <SelectItem value="emergency-only">Emergency Only</SelectItem>
+                    <SelectItem value="direct">Direct (High Trust)</SelectItem>
+                    <SelectItem value="activity-specific">Activity Specific</SelectItem>
+                    <SelectItem value="emergency-only">Emergency Only</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -539,7 +546,7 @@ const TribePage = () => {
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
-                e.preventDefault(); // Prevent auto-close
+                e.preventDefault();
                 handleDeleteMember();
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

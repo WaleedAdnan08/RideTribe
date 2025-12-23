@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, PlusCircle, Globe, Loader2, Trash2, Pencil } from "lucide-react";
+import { MapPin, PlusCircle, Globe, Loader2, Trash2, Pencil, Search, Building2, Home, School, FerrisWheel, Map as MapIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ const DestinationsPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -170,155 +171,179 @@ const DestinationsPage = () => {
     }
   };
 
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "School": return <School className="h-4 w-4 text-blue-500" />;
+      case "Home": return <Home className="h-4 w-4 text-green-500" />;
+      case "Sports": return <FerrisWheel className="h-4 w-4 text-orange-500" />;
+      case "Activity": return <FerrisWheel className="h-4 w-4 text-purple-500" />;
+      default: return <MapPin className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
   return (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Destinations</CardTitle>
-          <CardDescription>Manage common locations for your carpooling needs.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="mb-4 text-muted-foreground">
-            Here you can add and manage frequently used destinations like schools and activity centers.
-          </p>
-          
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="mb-6" onClick={handleCreateClick}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Destination
-              </Button>
-            </DialogTrigger>
-            <DialogContent
-              className="sm:max-w-[425px]"
-              onInteractOutside={(e) => {
-                const target = e.target as HTMLElement;
-                // Check if the click is inside a Google Maps Autocomplete container
-                // pac-container is the class for the dropdown
-                // pac-item is the class for individual items
-                if (
-                  target.closest('.pac-container') ||
-                  target.closest('.pac-item') ||
-                  target.classList.contains('pac-container') ||
-                  target.classList.contains('pac-item')
-                ) {
-                  e.preventDefault();
-                }
-              }}
-            >
-              <DialogHeader>
-                <DialogTitle>{editingId ? "Edit Destination" : "Add Destination"}</DialogTitle>
-                <DialogDescription>
-                  {editingId ? "Update the details of this destination." : "Enter the details of the new destination here."}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Name
-                    </Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Lincoln High School"
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="address" className="text-right">
-                      Address
-                    </Label>
-                    <PlaceAutocomplete
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      onPlaceSelect={handlePlaceSelect}
-                      placeholder="e.g. 123 School Ln"
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="category" className="text-right">
-                      Category
-                    </Label>
-                    <Select onValueChange={handleCategoryChange} defaultValue={formData.category}>
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="School">School</SelectItem>
-                        <SelectItem value="Sports">Sports</SelectItem>
-                        <SelectItem value="Activity">Activity</SelectItem>
-                        <SelectItem value="Home">Home</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Destinations</h1>
+          <p className="text-muted-foreground mt-1">Manage common locations for your carpooling needs.</p>
+        </div>
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="lg" className="shadow-lg shadow-primary/20" onClick={handleCreateClick}>
+              <PlusCircle className="mr-2 h-5 w-5" /> Add New Destination
+            </Button>
+          </DialogTrigger>
+          <DialogContent
+            className="sm:max-w-[500px]"
+            onInteractOutside={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                target.closest('.pac-container') ||
+                target.closest('.pac-item') ||
+                target.classList.contains('pac-container') ||
+                target.classList.contains('pac-item')
+              ) {
+                e.preventDefault();
+              }
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>{editingId ? "Edit Destination" : "Add Destination"}</DialogTitle>
+              <DialogDescription>
+                {editingId ? "Update the details of this destination." : "Enter the details of the new destination here."}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Lincoln High School"
+                    className="col-span-3"
+                  />
                 </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save changes
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="address" className="text-right">
+                    Address
+                  </Label>
+                  <PlaceAutocomplete
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    onPlaceSelect={handlePlaceSelect}
+                    placeholder="e.g. 123 School Ln"
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="category" className="text-right">
+                    Category
+                  </Label>
+                  <Select onValueChange={handleCategoryChange} defaultValue={formData.category}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="School">School</SelectItem>
+                      <SelectItem value="Sports">Sports</SelectItem>
+                      <SelectItem value="Activity">Activity</SelectItem>
+                      <SelectItem value="Home">Home</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card className="border-border/60 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          <div className="p-4 border-b border-border/50 bg-secondary/20 flex items-center justify-between">
+             <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search destinations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-background h-9"
+                />
+             </div>
+          </div>
 
           {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex justify-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
             </div>
           ) : destinations.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="pl-6">Name</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Date Added</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {destinations.map((dest) => {
+                {destinations.filter(dest => 
+                  dest.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                  dest.address.toLowerCase().includes(searchQuery.toLowerCase())
+                ).map((dest) => {
                   const id = dest.id || dest._id;
                   if (!id) return null;
                   return (
-                    <TableRow key={id}>
-                      <TableCell className="font-medium">{dest.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          {dest.address}
+                    <TableRow key={id} className="group hover:bg-muted/30">
+                      <TableCell className="font-medium pl-6">
+                        <div className="flex items-center gap-2">
+                           <div className="p-2 bg-secondary rounded-lg">
+                              {getCategoryIcon(dest.category || "Other")}
+                           </div>
+                           {dest.name}
                         </div>
-                        {(dest.geo || (dest.latitude && dest.longitude)) && (
-                          <p className="text-xs text-muted-foreground">
-                            <Globe className="inline-block h-3 w-3 mr-1" />
-                            {dest.geo
-                              ? `Lat: ${dest.geo.lat.toFixed(4)}, Lng: ${dest.geo.lng.toFixed(4)}`
-                              : `Lat: ${dest.latitude?.toFixed(4)}, Lng: ${dest.longitude?.toFixed(4)}`
-                            }
-                          </p>
-                        )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{dest.category || "N/A"}</Badge>
+                        <div className="flex flex-col">
+                           <span className="text-sm">{dest.address}</span>
+                           {(dest.geo || (dest.latitude && dest.longitude)) && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Globe className="h-3 w-3" />
+                              Verified Location
+                            </span>
+                           )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        {dest.created_at ? format(parseISO(dest.created_at), "MMM dd, yyyy") :
-                        dest.verified_date ? format(parseISO(dest.verified_date), "MMM dd, yyyy") : "N/A"}
+                        <Badge variant="secondary" className="font-normal">{dest.category || "N/A"}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(dest)}>
-                            <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                      <TableCell className="text-muted-foreground text-sm">
+                        {dest.created_at ? format(parseISO(dest.created_at), "MMM d, yyyy") :
+                        dest.verified_date ? format(parseISO(dest.verified_date), "MMM d, yyyy") : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => handleEditClick(dest)}>
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(id)}>
-                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(id)}>
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -328,8 +353,15 @@ const DestinationsPage = () => {
               </TableBody>
             </Table>
           ) : (
-            <div className="mt-6 p-4 border rounded-md bg-secondary/20 text-muted-foreground">
-              No destinations added yet.
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <MapIcon className="h-12 w-12 text-muted-foreground/30 mb-3" />
+              <p className="text-lg font-medium text-foreground">No destinations added</p>
+              <p className="text-muted-foreground mb-4 max-w-sm">
+                Add schools, sports fields, and activity centers to use them in your schedule.
+              </p>
+              <Button variant="outline" onClick={handleCreateClick}>
+                Add First Destination
+              </Button>
             </div>
           )}
         </CardContent>

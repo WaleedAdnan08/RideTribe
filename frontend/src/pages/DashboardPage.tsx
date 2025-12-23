@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { LogOut, Users, CalendarDays, MapPin, Car, UserPen, Loader2 } from "lucide-react";
+import { LogOut, Users, CalendarDays, MapPin, Car, UserPen, Loader2, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -42,113 +42,136 @@ const DashboardPage = () => {
     }
   };
 
+  const featureCards = [
+    {
+      to: "/tribe",
+      icon: Users,
+      title: "My Tribe",
+      description: "Manage your trusted circle of parents and drivers.",
+      color: "text-blue-500",
+      bg: "bg-blue-50 dark:bg-blue-900/20"
+    },
+    {
+      to: "/schedule",
+      icon: CalendarDays,
+      title: "Schedule",
+      description: "Organize drop-offs, pick-ups, and recurring trips.",
+      color: "text-purple-500",
+      bg: "bg-purple-50 dark:bg-purple-900/20"
+    },
+    {
+      to: "/matches",
+      icon: Car,
+      title: "Ride Matches",
+      description: "Find carpooling opportunities with your tribe.",
+      color: "text-green-500",
+      bg: "bg-green-50 dark:bg-green-900/20"
+    },
+    {
+      to: "/destinations",
+      icon: MapPin,
+      title: "Destinations",
+      description: "Save common locations like schools and fields.",
+      color: "text-orange-500",
+      bg: "bg-orange-50 dark:bg-orange-900/20"
+    }
+  ];
+
   return (
-    <div className="min-h-full flex flex-col items-center justify-center p-4">
+    <div className="space-y-8">
       {/* Hero Section */}
-      <div className="w-full max-w-4xl text-center py-12 md:py-20 mb-8 bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-lg shadow-xl relative">
-        <div className="absolute top-4 right-4">
-          <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
-            <DialogTrigger asChild>
-              <Button variant="secondary" size="sm" onClick={handleEditProfileOpen}>
-                <UserPen className="mr-2 h-4 w-4" /> Edit Profile
+      <div className="relative overflow-hidden rounded-3xl bg-primary text-primary-foreground shadow-xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary to-purple-600 opacity-90" />
+        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
+        <div className="absolute -left-24 -bottom-24 h-96 w-96 rounded-full bg-blue-400/20 blur-3xl" />
+        
+        <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-4 max-w-2xl">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Welcome back, {currentUser?.name || "Friend"}!
+            </h1>
+            <p className="text-lg text-primary-foreground/90 leading-relaxed">
+              Your carpooling command center is ready. You have upcoming trips and new match opportunities waiting.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <Button asChild variant="secondary" className="font-semibold shadow-sm hover:shadow-md transition-all">
+                <Link to="/schedule">
+                  View Schedule <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] text-left text-foreground">
-              <DialogHeader>
-                <DialogTitle>Edit Profile</DialogTitle>
-                <DialogDescription>
-                  Update your personal information here. Click save when you're done.
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleUpdateProfile}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Name
-                    </Label>
-                    <Input
-                      id="name"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="phone" className="text-right">
-                      Phone
-                    </Label>
-                    <Input
-                      id="phone"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      className="col-span-3"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isUpdating}>
-                    {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save changes
+              <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="bg-transparent border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 hover:text-white" onClick={handleEditProfileOpen}>
+                    <UserPen className="mr-2 h-4 w-4" /> Edit Profile
                   </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Edit Profile</DialogTitle>
+                    <DialogDescription>
+                      Update your personal information here.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleUpdateProfile}>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                          id="name"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          value={editForm.phone}
+                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={isUpdating}>
+                        {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Changes
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+          
+          {/* Decorative Illustration Placeholder or just visual balance */}
+          <div className="hidden md:block p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 shadow-inner">
+             <Car className="w-16 h-16 text-white opacity-90" />
+          </div>
         </div>
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
-          Welcome to RideTribe, {currentUser?.name || "User"}!
-        </h1>
-        <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
-          Simplify your family's carpooling with trusted connections and smart scheduling.
-        </p>
       </div>
 
-      <Card className="w-full max-w-4xl p-6 shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold mb-2">
-            Your RideTribe Hub
-          </CardTitle>
-          <CardDescription className="text-lg text-muted-foreground">
-            Quick access to manage your carpooling world.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Link to="/tribe" className="block">
-              <Card className="flex flex-col items-center p-6 h-full hover:shadow-md transition-shadow duration-200 ease-in-out group">
-                <Users className="w-12 h-12 text-primary mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="font-semibold text-lg group-hover:text-primary">Tribe Management</h3>
-                <p className="text-sm text-muted-foreground">Connect with trusted families.</p>
-              </Card>
-            </Link>
-            <Link to="/schedule" className="block">
-              <Card className="flex flex-col items-center p-6 h-full hover:shadow-md transition-shadow duration-200 ease-in-out group">
-                <CalendarDays className="w-12 h-12 text-primary mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="font-semibold text-lg group-hover:text-primary">Schedule Management</h3>
-                <p className="text-sm text-muted-foreground">Organize your children's trips.</p>
-              </Card>
-            </Link>
-            <Link to="/matches" className="block">
-              <Card className="flex flex-col items-center p-6 h-full hover:shadow-md transition-shadow duration-200 ease-in-out group">
-                <Car className="w-12 h-12 text-primary mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="font-semibold text-lg group-hover:text-primary">Ride Matching</h3>
-                <p className="text-sm text-muted-foreground">Find carpooling opportunities.</p>
-              </Card>
-            </Link>
-            <Link to="/destinations" className="block">
-              <Card className="flex flex-col items-center p-6 h-full hover:shadow-md transition-shadow duration-200 ease-in-out group">
-                <MapPin className="w-12 h-12 text-primary mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="font-semibold text-lg group-hover:text-primary">Destinations</h3>
-                <p className="text-sm text-muted-foreground">Manage common locations.</p>
-              </Card>
-            </Link>
-          </div>
-
-          <Button onClick={logout} className="mt-4" variant="outline">
-            <LogOut className="mr-2 h-4 w-4" /> Logout
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Feature Grid */}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {featureCards.map((card) => (
+          <Link key={card.to} to={card.to} className="group block h-full">
+            <Card className="h-full transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-muted/60">
+              <CardHeader className="space-y-1 pb-2">
+                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors ${card.bg}`}>
+                    <card.icon className={`w-6 h-6 ${card.color}`} />
+                 </div>
+                <CardTitle className="text-xl font-semibold group-hover:text-primary transition-colors">
+                  {card.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  {card.description}
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 };

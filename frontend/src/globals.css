@@ -4,83 +4,91 @@
 
 @layer base {
   :root {
-    --background: 210 36% 98%; /* Light background, slightly off-white */
-    --foreground: 222.2 47.4% 11.2%; /* Dark text */
+    /* Sophisticated Blue-Violet Primary */
+    --primary: 226 71% 40%;     /* Rich Royal Blue */
+    --primary-foreground: 210 40% 98%;
 
+    /* Soft, Cool Backgrounds */
+    --background: 210 20% 98%;  /* Very light blue-grey tint */
+    --foreground: 222 47% 11%;  /* Deep dark blue-grey text */
+
+    /* Cards - Clean White with subtle warmth */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 47.4% 11.2%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 200 80% 40%; /* Vibrant Blue/Teal */
-    --primary-foreground: 210 40% 98%; /* Off-white for contrast */
+    /* Secondary - Slate/Cool Gray */
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --secondary: 210 40% 96.1%; /* Light gray */
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 142.1 76.2% 36.3%; /* Soft Green accent */
+    /* Accent - Vibrant Coral/Salmon for actions */
+    --accent: 340 82% 52%;      /* Bright Pink/Coral */
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 200 80% 40%; /* Ring matches primary */
+    /* Borders & Inputs */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 226 71% 40%;        /* Matches Primary */
 
-    --radius: 0.75rem; /* Slightly larger radius for softer look */
+    --radius: 0.75rem;          /* Friendly, rounded corners */
 
-    --sidebar-background: 210 36% 98%; /* Light background for sidebar */
-    --sidebar-foreground: 222.2 47.4% 11.2%;
-    --sidebar-primary: 200 80% 40%;
+    /* Sidebar - Distinct from main background */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 226 71% 40%;
     --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 40% 96.1%;
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 200 80% 40%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 226 71% 40%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%; /* Dark background */
-    --foreground: 210 40% 98%; /* Light text */
+    /* Dark Mode - Deep Navy Theme */
+    --background: 222 47% 11%;  /* Deep Navy */
+    --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 217 33% 17%;        /* Lighter Navy Card */
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 217 33% 17%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 200 80% 60%; /* Lighter vibrant blue for dark mode */
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 217 91% 60%;     /* Brighter Blue for Dark Mode */
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 142.1 76.2% 45%; /* Lighter green accent for dark mode */
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 340 82% 60%;      /* Lighter Pink/Coral */
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 200 80% 60%;
-
-    --sidebar-background: 222.2 84% 4.9%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 224 76% 48%;
+    
+    --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 200 80% 60%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 17%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 200 80% 60%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 224 76% 48%;
   }
 }
 
@@ -90,16 +98,34 @@
   }
 
   body {
-    @apply bg-background text-foreground font-['Inter']; /* Apply Inter font */
-    background: linear-gradient(to bottom right, hsl(var(--background)), hsl(var(--background)) 80%, hsl(var(--primary) / 0.05)); /* Subtle gradient */
+    @apply bg-background text-foreground font-['Inter'] antialiased;
+    /* Elegant subtle gradient background */
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(226, 71%, 40%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(340, 82%, 52%, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold; /* Ensure headings are bold */
+    @apply font-semibold tracking-tight;
   }
 }
+
 /* Ensure Google Places Autocomplete shows above modals */
 .pac-container {
-  z-index: 9999 !important; /* Ensure it's above everything including dialogs and toasts */
-  pointer-events: auto !important; /* Allow clicks even if modal blocks outside interactions */
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+  font-family: 'Inter', sans-serif !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.pac-item {
+  padding: 8px 12px !important;
+  cursor: pointer !important;
+}
+
+.pac-item:hover {
+  background-color: hsl(var(--muted)) !important;
 }

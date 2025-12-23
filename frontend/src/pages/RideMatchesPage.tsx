@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CarFront, CalendarDays, MapPin, UserRound, Loader2, Check, X } from "lucide-react";
+import { CarFront, CalendarDays, MapPin, UserRound, Loader2, Check, X, Navigation, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -42,8 +42,6 @@ const MapBoundsUpdater = ({ matches }: { matches: RideMatch[] }) => {
 
     if (hasValidPoints) {
       if (pointCount === 1 && singlePoint) {
-        // For a single point, directly center and zoom instead of fitting bounds
-        // This avoids the issue where fitBounds zooms in too close or fails to center correctly on a single point
         map.setCenter(singlePoint);
         map.setZoom(15);
       } else {
@@ -97,7 +95,6 @@ const RideMatchesPage = () => {
       await matchesApi.updateStatus(matchId, newStatus);
       toast({ title: "Success", description: `Match ${newStatus}` });
       
-      // Update local state
       setMatches(prev => prev.map(m =>
         (m._id === matchId || m.id === matchId) ? { ...m, status: newStatus } : m
       ));
@@ -111,50 +108,51 @@ const RideMatchesPage = () => {
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "suggested": return "secondary";
-      case "accepted": return "default";
-      case "declined": return "destructive";
+      case "suggested": return "secondary"; // Blue/Gray
+      case "accepted": return "default"; // Primary/Dark
+      case "declined": return "destructive"; // Red
       case "completed": return "outline";
-      case "cancelled": return "destructive";
       default: return "secondary";
     }
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Ride Matches</CardTitle>
-          <CardDescription>View suggested carpooling opportunities.</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Ride Matches</h1>
+          <p className="text-muted-foreground mt-1">Review and coordinate carpooling opportunities.</p>
+        </div>
+        <Button onClick={fetchMatches} disabled={isLoading} variant="outline" className="shadow-sm">
+          <CarFront className="mr-2 h-4 w-4" /> Refresh Matches
+        </Button>
+      </div>
+
+      <Card className="border-border/60 shadow-sm overflow-hidden bg-background/50 backdrop-blur-sm">
+        <CardContent className="p-0">
           <Tabs defaultValue="list" className="w-full">
-            <div className="flex justify-between items-center mb-6">
-              <TabsList>
+            <div className="p-4 border-b border-border/50 bg-secondary/20 flex items-center justify-between">
+              <TabsList className="bg-background/80">
                 <TabsTrigger value="list">List View</TabsTrigger>
                 <TabsTrigger value="map">Map View</TabsTrigger>
               </TabsList>
-              <Button onClick={fetchMatches} disabled={isLoading}>
-                <CarFront className="mr-2 h-4 w-4" /> Refresh Matches
-              </Button>
             </div>
 
             {isLoading ? (
-              <div className="flex justify-center p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <div className="flex justify-center p-12">
+                <Loader2 className="h-10 w-10 animate-spin text-primary/50" />
               </div>
             ) : matches.length > 0 ? (
               <>
-                <TabsContent value="list">
+                <TabsContent value="list" className="m-0">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Match For</TableHead>
-                        <TableHead>Requester</TableHead>
-                        <TableHead>Provider</TableHead>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableHead className="pl-6">Match Details</TableHead>
+                        <TableHead>People Involved</TableHead>
                         <TableHead>Destination</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="text-right pr-6">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -167,61 +165,67 @@ const RideMatchesPage = () => {
                         const isProcessing = processingId === matchId;
 
                         return (
-                          <TableRow key={matchId}>
-                            <TableCell className="font-medium">
-                              {scheduleEntry?.child_name || "N/A"}
-                              <p className="text-xs text-muted-foreground">
-                                {scheduleEntry?.pickup_time ? format(parseISO(scheduleEntry.pickup_time), "MMM dd, hh:mm a") : "N/A"}
-                              </p>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <UserRound className="h-3 w-3 text-muted-foreground" />
-                                {requester?.name || "Unknown"}
+                          <TableRow key={matchId} className="group hover:bg-muted/30">
+                            <TableCell className="pl-6">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-medium text-foreground">
+                                  {scheduleEntry?.child_name || "Unknown"}
+                                </span>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {scheduleEntry?.pickup_time ? format(parseISO(scheduleEntry.pickup_time), "MMM dd, h:mm a") : "N/A"}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
-                                <UserRound className="h-3 w-3 text-muted-foreground" />
-                                {provider?.name || "Unknown"}
+                              <div className="flex flex-col gap-1 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground text-xs uppercase tracking-wide w-16">Requester</span>
+                                  <span className="font-medium">{requester?.name || "Unknown"}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground text-xs uppercase tracking-wide w-16">Provider</span>
+                                  <span className="font-medium">{provider?.name || "Unknown"}</span>
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3 text-muted-foreground" />
-                                {destination?.name || "Unknown"}
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{destination?.name || "Unknown"}</span>
                                 {!(destination?.geo || (destination?.latitude && destination?.longitude)) && (
-                                  <span title="Location data missing" className="text-yellow-500 cursor-help ml-1">⚠️</span>
+                                  <span title="Location data missing" className="text-amber-500 cursor-help ml-1">⚠️</span>
                                 )}
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={getStatusVariant(match.status)}>
+                              <Badge variant={getStatusVariant(match.status)} className="capitalize shadow-sm">
                                 {match.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right">
-                              {match.status === 'suggested' && (
+                            <TableCell className="text-right pr-6">
+                              {match.status === 'suggested' ? (
                                 <div className="flex justify-end gap-2">
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    className="h-8 w-8 p-0 border-green-200 hover:bg-green-50 hover:text-green-600"
+                                    className="bg-green-600 hover:bg-green-700 text-white h-8 px-3 shadow-sm"
                                     onClick={() => handleStatusUpdate(matchId, 'accepted')}
                                     disabled={isProcessing}
                                   >
-                                    <Check className="h-4 w-4" />
+                                    <Check className="h-4 w-4 mr-1" /> Accept
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 w-8 p-0 border-red-200 hover:bg-red-50 hover:text-red-600"
+                                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 h-8 px-3"
                                     onClick={() => handleStatusUpdate(matchId, 'declined')}
                                     disabled={isProcessing}
                                   >
-                                    <X className="h-4 w-4" />
+                                    <X className="h-4 w-4 mr-1" /> Decline
                                   </Button>
                                 </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">No actions</span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -230,8 +234,8 @@ const RideMatchesPage = () => {
                     </TableBody>
                   </Table>
                 </TabsContent>
-                <TabsContent value="map">
-                  <div className="h-[600px] w-full rounded-md overflow-hidden border">
+                <TabsContent value="map" className="m-0 p-0">
+                  <div className="h-[600px] w-full bg-muted/20 relative">
                     <Map defaultCenter={{ lat: 34.0522, lng: -118.2437 }} defaultZoom={10}>
                       <MapBoundsUpdater matches={matches} />
                       {matches.map(match => {
@@ -248,8 +252,11 @@ const RideMatchesPage = () => {
                             position={position}
                             onClick={() => setSelectedMatch(match)}
                           >
-                            <div className="relative flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                              <MapPin className="h-10 w-10 text-blue-600 fill-white drop-shadow-md" />
+                            <div className="relative group cursor-pointer">
+                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-black/20 blur-[2px] rounded-full" />
+                              <div className="relative bg-primary text-primary-foreground p-2 rounded-full shadow-lg hover:scale-110 transition-transform ring-2 ring-white dark:ring-slate-900">
+                                <CarFront className="h-5 w-5" />
+                              </div>
                             </div>
                           </AdvancedMarker>
                         );
@@ -258,24 +265,34 @@ const RideMatchesPage = () => {
                         <InfoWindow
                           position={selectedMatchPosition}
                           onCloseClick={() => setSelectedMatch(null)}
+                          maxWidth={300}
                         >
-                          <div className="p-2 min-w-[200px]">
-                            <h3 className="font-bold mb-2">{selectedMatch.schedule?.destination?.name}</h3>
-                            <p className="text-sm mb-1">
-                              <strong>Child:</strong> {selectedMatch.schedule?.child_name}
-                            </p>
-                            <p className="text-sm mb-1">
-                              <strong>Time:</strong> {selectedMatch.schedule?.pickup_time ? format(parseISO(selectedMatch.schedule.pickup_time), "MMM dd, hh:mm a") : "N/A"}
-                            </p>
-                            <p className="text-sm mb-2">
-                              <strong>Status:</strong> {selectedMatch.status}
-                            </p>
+                          <div className="p-1">
+                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/10">
+                               <MapPin className="h-4 w-4 text-primary" />
+                               <h3 className="font-bold text-sm">{selectedMatch.schedule?.destination?.name}</h3>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Child:</span>
+                                <span className="font-medium">{selectedMatch.schedule?.child_name}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Time:</span>
+                                <span>{selectedMatch.schedule?.pickup_time ? format(parseISO(selectedMatch.schedule.pickup_time), "h:mm a") : "N/A"}</span>
+                              </div>
+                              <div className="flex justify-between items-center mt-2">
+                                <Badge variant={getStatusVariant(selectedMatch.status)} className="capitalize text-xs">
+                                  {selectedMatch.status}
+                                </Badge>
+                              </div>
+                            </div>
                             {selectedMatch.status === 'suggested' && (
-                              <div className="flex gap-2 mt-2">
-                                <Button size="sm" onClick={() => handleStatusUpdate(selectedMatch.id || selectedMatch._id || "", 'accepted')}>
+                              <div className="flex gap-2 mt-3 pt-2 border-t border-border/10">
+                                <Button size="sm" className="w-full h-7 text-xs bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(selectedMatch.id || selectedMatch._id || "", 'accepted')}>
                                   Accept
                                 </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleStatusUpdate(selectedMatch.id || selectedMatch._id || "", 'declined')}>
+                                <Button size="sm" variant="destructive" className="w-full h-7 text-xs" onClick={() => handleStatusUpdate(selectedMatch.id || selectedMatch._id || "", 'declined')}>
                                   Decline
                                 </Button>
                               </div>
@@ -288,8 +305,15 @@ const RideMatchesPage = () => {
                 </TabsContent>
               </>
             ) : (
-              <div className="mt-6 p-4 border rounded-md bg-secondary/20 text-muted-foreground">
-                No ride matches found yet. Matches appear here when your schedule overlaps with a tribe member.
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Navigation className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                <p className="text-lg font-medium text-foreground">No matches found</p>
+                <p className="text-muted-foreground mb-4 max-w-sm">
+                  Matches appear here when your schedule overlaps with a tribe member's trip.
+                </p>
+                <Button variant="outline" onClick={fetchMatches}>
+                  Check Again
+                </Button>
               </div>
             )}
           </Tabs>
