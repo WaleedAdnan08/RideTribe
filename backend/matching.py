@@ -22,8 +22,15 @@ async def find_and_create_matches(schedule_id: str):
         return
 
     user_id = new_schedule["user_id"]
-    requester_user = await db.users.find_one({"_id": user_id})
+    # Convert string user_id to ObjectId for user lookup
+    try:
+        user_oid = ObjectId(user_id)
+    except:
+        return
+
+    requester_user = await db.users.find_one({"_id": user_oid})
     if not requester_user:
+        print(f"Requester user {user_id} not found")
         return
     destination_id = new_schedule["destination_id"]
     pickup_time = new_schedule.get("pickup_time")
@@ -63,6 +70,7 @@ async def find_and_create_matches(schedule_id: str):
 
     # 3. Find other members in these tribes (potential providers/peers)
     # We want unique user IDs that are NOT the current user
+    # tribe_id is stored as string in memberships
     tribe_memberships = await db.tribe_memberships.find({
         "tribe_id": {"$in": tribe_ids},
         "user_id": {"$ne": user_id}
@@ -141,7 +149,7 @@ async def find_and_create_matches(schedule_id: str):
         # Create Notifications
         
         # 1. Notify Requester (Current User)
-        provider_user = await db.users.find_one({"_id": provider_id})
+        provider_user = await db.users.find_one({"_id": ObjectId(provider_id)})
         provider_name = provider_user["name"] if provider_user else "a tribe member"
         
         req_notification = NotificationInDB(
