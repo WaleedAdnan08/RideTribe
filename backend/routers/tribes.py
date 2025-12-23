@@ -85,6 +85,25 @@ async def list_tribe_members(tribe_id: str, current_user: UserInDB = Depends(get
                 status=m["status"],
                 joined_at=m["created_at"]
             ))
+    
+    # Also fetch pending invites for this tribe
+    pending_invites = await db.pending_invites.find({"tribe_id": tribe_id}).to_list(100)
+    for invite in pending_invites:
+        # Construct virtual user for pending invite
+        # We use the invite ID as the virtual user ID so we can delete it later
+        virtual_user = {
+            "_id": str(invite["_id"]),
+            "name": "Pending Invite",
+            "phone": invite["phone"],
+            "created_at": datetime.utcnow()
+        }
+        
+        members.append(TribeMemberResponse(
+            user=UserResponse(**virtual_user),
+            trust_level=invite["trust_level"],
+            status="invited",
+            joined_at=datetime.utcnow()
+        ))
             
     return members
 
@@ -128,16 +147,19 @@ async def invite_member(
             trust_level=invite.trust_level,
             invited_by=str(current_user.id)
         )
-        await db.pending_invites.insert_one(pending_invite.model_dump(by_alias=True, exclude={"id"}))
+        result = await db.pending_invites.insert_one(pending_invite.model_dump(by_alias=True, exclude={"id"}))
         
         # Return a placeholder response
         # We construct a virtual user object for the response
         virtual_user = {
-            "_id": "pending",
+            "_id": str(result.inserted_id),
             "name": "Pending Invite",
             "phone": invite.phone_number,
             "created_at": datetime.utcnow()
         }
+        
+        # If pending_invite.id is None (not inserted yet? no, insert_one was called)
+        # Wait, Pydantic model dump exclude id... we need the inserted_id from result
         
         return TribeMemberResponse(
             user=UserResponse(**virtual_user),
@@ -245,10 +267,16 @@ async def remove_member(
     })
     
     if not membership:
+        # Check if it is a pending invite (user_id passed is the invite_id)
+        try:
+            pending_invite = await db.pending_invites.find_one({"_id": ObjectId(user_id), "tribe_id": tribe_id})
+            if pending_invite:
+                await db.pending_invites.delete_one({"_id": ObjectId(user_id)})
+                return None
+        except:
+            pass # Not a valid object ID or not found
+            
         logging.warning(f"Membership not found for user {user_id} in tribe {tribe_id}")
-        # DEBUG: Check if it exists with ObjectId matching?
-        # In case some records have ObjectId and some have str
-        
         raise HTTPException(status_code=404, detail=f"Membership not found for user {user_id} in tribe {tribe_id}")
 
     result = await db.tribe_memberships.delete_one({

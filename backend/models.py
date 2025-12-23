@@ -154,6 +154,7 @@ class DestinationBase(BaseModel):
     google_place_id: Optional[str] = None
     geo: Optional[Geo] = None
     category: Optional[str] = None
+    is_archived: bool = False
 
 class DestinationCreate(DestinationBase):
     pass
