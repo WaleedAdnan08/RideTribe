@@ -23,6 +23,8 @@ const MapBoundsUpdater = ({ matches }: { matches: RideMatch[] }) => {
 
     const bounds = new google.maps.LatLngBounds();
     let hasValidPoints = false;
+    let pointCount = 0;
+    let singlePoint = null;
 
     matches.forEach(match => {
       const dest = match.schedule?.destination;
@@ -33,18 +35,19 @@ const MapBoundsUpdater = ({ matches }: { matches: RideMatch[] }) => {
       if (position) {
         bounds.extend(position);
         hasValidPoints = true;
+        pointCount++;
+        singlePoint = position;
       }
     });
 
     if (hasValidPoints) {
-      map.fitBounds(bounds);
-      
-      // If there's only one point, zoom out a bit so it's not too close
-      if (matches.length === 1) {
-         // Use a timeout to ensure fitBounds has finished before overriding zoom
-         setTimeout(() => {
-           map.setZoom(14);
-         }, 100);
+      if (pointCount === 1 && singlePoint) {
+        // For a single point, directly center and zoom instead of fitting bounds
+        // This avoids the issue where fitBounds zooms in too close or fails to center correctly on a single point
+        map.setCenter(singlePoint);
+        map.setZoom(15);
+      } else {
+        map.fitBounds(bounds);
       }
     }
   }, [map, matches]);
@@ -187,6 +190,9 @@ const RideMatchesPage = () => {
                               <div className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3 text-muted-foreground" />
                                 {destination?.name || "Unknown"}
+                                {!(destination?.geo || (destination?.latitude && destination?.longitude)) && (
+                                  <span title="Location data missing" className="text-yellow-500 cursor-help ml-1">⚠️</span>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
