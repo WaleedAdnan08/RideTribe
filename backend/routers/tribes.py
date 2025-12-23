@@ -6,8 +6,9 @@ from db import db
 from models import (
     UserInDB, TribeCreate, TribeResponse, TribeInDB,
     TribeInvite, TribeMembershipInDB, TribeMemberResponse, UserResponse,
-    TribeMemberUpdate
+    TribeMemberUpdate, NotificationInDB, PendingInviteInDB
 )
+from datetime import datetime
 from auth import get_current_user
 
 router = APIRouter()
@@ -110,12 +111,41 @@ async def invite_member(
     print(f"DEBUG: searching for user with phone: {invite.phone_number}")
     user_to_invite = await db.users.find_one({"phone": invite.phone_number})
     if not user_to_invite:
-        print(f"DEBUG: User not found for phone: {invite.phone_number}")
-        raise HTTPException(
-            status_code=404,
-            detail="User with this phone number not found. They must be registered first."
-        )
+        print(f"DEBUG: User not found for phone: {invite.phone_number}, checking pending invites")
         
+        # Check if already pending
+        existing_invite = await db.pending_invites.find_one({
+            "tribe_id": ObjectId(tribe_id),
+            "phone": invite.phone_number
+        })
+        if existing_invite:
+             raise HTTPException(status_code=400, detail="Invite already pending for this number")
+
+        # Create Pending Invite
+        pending_invite = PendingInviteInDB(
+            tribe_id=tribe_id,
+            phone=invite.phone_number,
+            trust_level=invite.trust_level,
+            invited_by=str(current_user.id)
+        )
+        await db.pending_invites.insert_one(pending_invite.model_dump(by_alias=True, exclude={"id"}))
+        
+        # Return a placeholder response
+        # We construct a virtual user object for the response
+        virtual_user = {
+            "_id": "pending",
+            "name": "Pending Invite",
+            "phone": invite.phone_number,
+            "created_at": datetime.utcnow()
+        }
+        
+        return TribeMemberResponse(
+            user=UserResponse(**virtual_user),
+            trust_level=invite.trust_level,
+            status="invited",
+            joined_at=datetime.utcnow()
+        )
+
     # Check if already a member
     existing_membership = await db.tribe_memberships.find_one({
         "tribe_id": tribe_id,
@@ -144,6 +174,22 @@ async def invite_member(
         {"$inc": {"member_count": 1}}
     )
     
+    return TribeMemberResponse(
+        user=UserResponse(**user_to_invite),
+        trust_level=new_membership.trust_level,
+        status=new_membership.status,
+        joined_at=new_membership.created_at
+    )
+
+    # Send notification to the invited user
+    notification = NotificationInDB(
+        user_id=str(user_to_invite["_id"]),
+        type="invite_received",
+        message=f"You have been invited to join the tribe '{tribe['name']}'!",
+        related_id=tribe_id
+    )
+    await db.notifications.insert_one(notification.model_dump(by_alias=True, exclude={"id"}))
+
     return TribeMemberResponse(
         user=UserResponse(**user_to_invite),
         trust_level=new_membership.trust_level,

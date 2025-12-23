@@ -1,7 +1,16 @@
 from datetime import datetime, timedelta
 from bson import ObjectId
 from db import db
-from models import RideMatchInDB
+from models import RideMatchInDB, NotificationInDB
+
+def calculate_trust_score(trust_level: str) -> int:
+    if trust_level == "direct":
+        return 100
+    elif trust_level == "activity-specific":
+        return 80
+    elif trust_level == "emergency-only":
+        return 60
+    return 50
 
 async def find_and_create_matches(schedule_id: str):
     """
@@ -13,6 +22,9 @@ async def find_and_create_matches(schedule_id: str):
         return
 
     user_id = new_schedule["user_id"]
+    requester_user = await db.users.find_one({"_id": user_id})
+    if not requester_user:
+        return
     destination_id = new_schedule["destination_id"]
     pickup_time = new_schedule.get("pickup_time")
     
@@ -102,14 +114,51 @@ async def find_and_create_matches(schedule_id: str):
         if existing_match:
             continue
             
+        # Calculate Trust Score
+        provider_id = match_schedule["user_id"]
+        # Find membership for this provider in the tribes we are looking at
+        # We want the highest trust level if multiple exist
+        trust_score = 50
+        for m in tribe_memberships:
+            if m["user_id"] == provider_id:
+                score = calculate_trust_score(m.get("trust_level", ""))
+                if score > trust_score:
+                    trust_score = score
+
         # Create match suggestion
         match_in_db = RideMatchInDB(
             requester_id=user_id,
-            provider_id=match_schedule["user_id"],
+            provider_id=provider_id,
             schedule_entry_id=schedule_id,
             provider_schedule_id=str(match_schedule["_id"]),
-            match_score=95, # Mock score for MVP
+            match_score=trust_score,
             status="suggested"
         )
         
-        await db.matches.insert_one(match_in_db.model_dump(by_alias=True, exclude={"id"}))
+        result = await db.matches.insert_one(match_in_db.model_dump(by_alias=True, exclude={"id"}))
+        match_id = str(result.inserted_id)
+
+        # Create Notifications
+        
+        # 1. Notify Requester (Current User)
+        provider_user = await db.users.find_one({"_id": provider_id})
+        provider_name = provider_user["name"] if provider_user else "a tribe member"
+        
+        req_notification = NotificationInDB(
+            user_id=user_id,
+            type="match_found",
+            message=f"Ride match found with {provider_name}!",
+            related_id=match_id
+        )
+        await db.notifications.insert_one(req_notification.model_dump(by_alias=True, exclude={"id"}))
+
+        # 2. Notify Provider (The other parent)
+        requester_name = requester_user["name"]
+        
+        prov_notification = NotificationInDB(
+            user_id=provider_id,
+            type="match_found",
+            message=f"Ride match found with {requester_name}!",
+            related_id=match_id
+        )
+        await db.notifications.insert_one(prov_notification.model_dump(by_alias=True, exclude={"id"}))

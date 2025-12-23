@@ -32,8 +32,13 @@ const SchedulePage = () => {
     child_name: "",
     destination_id: "",
     pickup_date: "",
-    pickup_time_part: "",
     recurrence: "once"
+  });
+
+  const [timeState, setTimeState] = useState({
+    hour: "12",
+    minute: "00",
+    period: "PM"
   });
 
   const resetForm = () => {
@@ -41,9 +46,9 @@ const SchedulePage = () => {
       child_name: "",
       destination_id: "",
       pickup_date: "",
-      pickup_time_part: "",
       recurrence: "once"
     });
+    setTimeState({ hour: "12", minute: "00", period: "PM" });
     setEditingId(null);
   };
 
@@ -55,19 +60,28 @@ const SchedulePage = () => {
   const handleEditClick = (schedule: any) => {
     // Parse the date to split into date and time
     let dateStr = "";
-    let timeStr = "";
     
     if (schedule.pickup_time) {
       const date = parseISO(schedule.pickup_time);
       dateStr = format(date, "yyyy-MM-dd");
-      timeStr = format(date, "HH:mm");
+      
+      // Parse 12-hour format parts
+      const hour24 = date.getHours();
+      const period = hour24 >= 12 ? "PM" : "AM";
+      const hour12 = hour24 % 12 || 12; // Convert 0 to 12
+      const minute = date.getMinutes().toString().padStart(2, "0");
+
+      setTimeState({
+        hour: hour12.toString(),
+        minute: minute,
+        period: period
+      });
     }
 
     setFormData({
       child_name: schedule.child_name,
       destination_id: schedule.destination_id,
       pickup_date: dateStr,
-      pickup_time_part: timeStr,
       recurrence: schedule.recurrence || "once"
     });
     setEditingId(schedule.id || schedule._id);
@@ -103,19 +117,39 @@ const SchedulePage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.child_name || !formData.destination_id || !formData.pickup_date || !formData.pickup_time_part) {
+    if (!formData.child_name || !formData.destination_id || !formData.pickup_date) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      // Format ISO string from local date and time
-      const dateTimeString = `${formData.pickup_date}T${formData.pickup_time_part}`;
-      const date = new Date(dateTimeString);
+      // Convert 12h parts to 24h string
+      let hour24 = parseInt(timeState.hour);
+      if (timeState.period === "PM" && hour24 !== 12) hour24 += 12;
+      if (timeState.period === "AM" && hour24 === 12) hour24 = 0;
+      
+      const timeStr = `${hour24.toString().padStart(2, "0")}:${timeState.minute}`;
+      
+      // Robust Date Construction (forces Local Time interpretation)
+      // Parse YYYY-MM-DD
+      const [year, month, day] = formData.pickup_date.split("-").map(Number);
+      
+      // Create date using (Year, MonthIndex, Day, Hour, Minute)
+      // Month is 0-indexed in JS Date
+      const date = new Date(year, month - 1, day, hour24, parseInt(timeState.minute));
+      
       const isoDate = date.toISOString();
 
-      const { pickup_date, pickup_time_part, ...submitData } = formData;
+      console.log("DEBUG: Time Selection Details:", {
+        inputState: timeState,
+        calculatedTimeStr: timeStr,
+        pickupDate: formData.pickup_date,
+        generatedDateObj: date.toString(),
+        finalISO: isoDate
+      });
+
+      const { pickup_date, ...submitData } = formData;
       const apiData = {
         ...submitData,
         pickup_time: isoDate,
@@ -233,12 +267,51 @@ const SchedulePage = () => {
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right">Time</Label>
-                    <Input
-                      type="time"
-                      className="col-span-3"
-                      value={formData.pickup_time_part}
-                      onChange={e => setFormData(prev => ({...prev, pickup_time_part: e.target.value}))}
-                    />
+                    <div className="col-span-3 flex gap-2">
+                      {/* Hour Selector */}
+                      <Select
+                        value={timeState.hour}
+                        onValueChange={val => setTimeState(prev => ({...prev, hour: val}))}
+                      >
+                        <SelectTrigger className="w-[80px]">
+                          <SelectValue placeholder="HH" />
+                        </SelectTrigger>
+                        <SelectContent className="h-[200px]">
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                            <SelectItem key={h} value={h.toString()}>{h}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Minute Selector */}
+                      <Select
+                        value={timeState.minute}
+                        onValueChange={val => setTimeState(prev => ({...prev, minute: val}))}
+                      >
+                        <SelectTrigger className="w-[80px]">
+                          <SelectValue placeholder="MM" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["00", "15", "30", "45"].map((m) => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Period Selector */}
+                      <Select
+                        value={timeState.period}
+                        onValueChange={val => setTimeState(prev => ({...prev, period: val}))}
+                      >
+                        <SelectTrigger className="w-[80px]">
+                          <SelectValue placeholder="AM/PM" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AM">AM</SelectItem>
+                          <SelectItem value="PM">PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right">Recurrence</Label>
@@ -288,6 +361,9 @@ const SchedulePage = () => {
                   // entry.destination is enriched by backend
                   const destination = entry.destination;
                   const pickupTime = entry.pickup_time ? parseISO(entry.pickup_time) : new Date();
+                  
+                  // Debug log for display (can be removed later)
+                  // console.log(`DEBUG: Row ${entry.child_name}`, { raw: entry.pickup_time, parsed: pickupTime.toString() });
 
                   return (
                     <TableRow key={entry._id || entry.id}>

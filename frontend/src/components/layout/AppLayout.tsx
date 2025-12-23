@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import { NotificationCenter } from "@/components/ui/NotificationCenter";
 
 interface NavLinkProps {
   to: string;
@@ -122,6 +123,11 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
       )}
 
       <div className="flex flex-col flex-1">
+        {!isMobile && (
+          <header className="flex h-16 items-center justify-end px-6 border-b bg-background shadow-sm">
+             <NotificationCenter />
+          </header>
+        )}
         {/* Top Nav for Mobile */}
         {isMobile && (
           <header className="flex h-16 items-center justify-between border-b bg-background px-4 md:hidden shadow-sm">
@@ -173,7 +179,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
               </SheetContent>
             </Sheet>
             <h1 className="text-xl font-bold text-primary">RideTribe</h1>
-            <div className="w-10"></div> {/* Placeholder for alignment */}
+            <NotificationCenter />
           </header>
         )}
 

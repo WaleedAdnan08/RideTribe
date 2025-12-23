@@ -3,7 +3,10 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from config import settings
 from db import db
-from models import UserCreate, UserResponse, UserInDB, UserLogin, Token, AuthResponse
+from models import (
+    UserCreate, UserResponse, UserInDB, UserLogin, Token, AuthResponse,
+    TribeMembershipInDB, NotificationInDB
+)
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
 
 router = APIRouter()
@@ -28,6 +31,41 @@ async def signup(user: UserCreate):
     new_user = await db.users.insert_one(user_in_db.model_dump(by_alias=True, exclude={"id"}))
     created_user = await db.users.find_one({"_id": new_user.inserted_id})
     
+    # Process Pending Invites
+    pending_invites = await db.pending_invites.find({"phone": user.phone}).to_list(100)
+    
+    for invite in pending_invites:
+        # Create membership
+        membership = TribeMembershipInDB(
+            tribe_id=str(invite["tribe_id"]),
+            user_id=str(new_user.inserted_id),
+            trust_level=invite["trust_level"],
+            status="accepted"
+        )
+        await db.tribe_memberships.insert_one(membership.model_dump(by_alias=True, exclude={"id"}))
+        
+        # Increment tribe member count
+        await db.tribes.update_one(
+            {"_id": invite["tribe_id"]},
+            {"$inc": {"member_count": 1}}
+        )
+        
+        # Notify new user
+        tribe = await db.tribes.find_one({"_id": invite["tribe_id"]})
+        tribe_name = tribe["name"] if tribe else "Unknown Tribe"
+        
+        notification = NotificationInDB(
+            user_id=str(new_user.inserted_id),
+            type="invite_accepted",
+            message=f"You have automatically joined the tribe '{tribe_name}' based on a pending invite.",
+            related_id=str(invite["tribe_id"])
+        )
+        await db.notifications.insert_one(notification.model_dump(by_alias=True, exclude={"id"}))
+
+    # Clean up pending invites
+    if pending_invites:
+        await db.pending_invites.delete_many({"phone": user.phone})
+
     # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(

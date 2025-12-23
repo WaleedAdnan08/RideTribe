@@ -1,6 +1,6 @@
 from typing import Optional, Annotated
 from pydantic import BaseModel, Field, BeforeValidator, ConfigDict, field_validator
-from datetime import datetime
+from datetime import datetime, timezone
 from utils import normalize_phone
 
 # Helper to map ObjectId to string
@@ -111,6 +111,19 @@ class TribeMemberResponse(BaseModel):
 class TribeMemberUpdate(BaseModel):
     trust_level: str
 
+class PendingInviteInDB(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    tribe_id: PyObjectId
+    phone: str
+    trust_level: str
+    invited_by: PyObjectId
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+    )
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -167,6 +180,15 @@ class ScheduleEntryBase(BaseModel):
     recurrence: str = "once"
     status: str = "active"
 
+    @field_validator('pickup_time', 'dropoff_time')
+    @classmethod
+    def ensure_tz(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v is None:
+            return None
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
+
 class ScheduleEntryUpdate(BaseModel):
     child_name: Optional[str] = None
     destination_id: Optional[PyObjectId] = None
@@ -210,6 +232,31 @@ class RideMatchBase(BaseModel):
 class RideMatchInDB(RideMatchBase):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+    )
+
+class NotificationBase(BaseModel):
+    user_id: PyObjectId
+    type: str # "match_found", "invite_received", "ride_accepted"
+    message: str
+    related_id: Optional[str] = None # ID of the related entity (match_id, tribe_id, etc.)
+    is_read: bool = False
+
+class NotificationInDB(NotificationBase):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+    )
+
+class NotificationResponse(NotificationBase):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    created_at: datetime
 
     model_config = ConfigDict(
         populate_by_name=True,

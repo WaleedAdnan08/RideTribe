@@ -95,3 +95,14 @@ export interface RideMatch {
   suggested_date?: string;
   created_date?: string;
 }
+
+export interface Notification {
+  id: string;
+  _id?: string;
+  user_id: string;
+  type: "match_found" | "invite_received" | "invite_accepted" | "ride_accepted";
+  message: string;
+  related_id?: string;
+  is_read: boolean;
+  created_at: string;
+}

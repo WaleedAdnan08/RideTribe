@@ -4,7 +4,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
 import time
 from db import db
-from routers import auth, destinations, tribes, schedules, matches
+from routers import auth, destinations, tribes, schedules, matches, notifications
 
 app = FastAPI()
 
@@ -52,6 +52,7 @@ app.include_router(destinations.router, prefix="/api/v1/destinations", tags=["de
 app.include_router(tribes.router, prefix="/api/v1/tribes", tags=["tribes"])
 app.include_router(schedules.router, prefix="/api/v1/schedules", tags=["schedules"])
 app.include_router(matches.router, prefix="/api/v1/matches", tags=["matches"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
 
 @app.get("/")
 async def root():
