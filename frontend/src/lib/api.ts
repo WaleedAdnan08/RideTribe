@@ -95,4 +95,8 @@ export const matchesApi = {
   updateStatus: (id: string, status: string) => api.patch<any>(`/matches/${id}`, { status }),
 };
 
+export const authApi = {
+  updateProfile: (data: { name?: string; phone?: string }) => api.put<any>('/auth/me', data),
+};
+
 export default api;

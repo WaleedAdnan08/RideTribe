@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { showSuccess, showError } from "@/utils/toast";
-import api from "@/lib/api";
+import api, { authApi } from "@/lib/api";
 import { User } from "@/types";
 
 interface AuthResponse {
@@ -19,6 +19,7 @@ interface AuthContextType {
   login: (phoneNumber: string, password: string) => Promise<void>;
   signup: (name: string, phoneNumber: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (data: { name?: string; phone?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -89,6 +90,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateProfile = async (data: { name?: string; phone?: string }) => {
+    try {
+      const updatedUser = await authApi.updateProfile(data);
+      
+      const user: User = {
+        ...updatedUser,
+        id: updatedUser._id || updatedUser.id,
+        phoneNumber: updatedUser.phone
+      };
+
+      setCurrentUser(user);
+      showSuccess("Profile updated successfully!");
+    } catch (error: any) {
+      console.error("AuthContext: Update profile error:", error);
+      showError(error.message || "Failed to update profile.");
+      throw error;
+    }
+  };
+
   const logout = () => {
     setCurrentUser(null);
     setIsLoggedIn(false);
@@ -98,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoggedIn, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ currentUser, isLoggedIn, isLoading, login, signup, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

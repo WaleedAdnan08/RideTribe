@@ -51,6 +51,17 @@ class UserResponse(UserBase):
         arbitrary_types_allowed=True,
     )
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        return normalize_phone(v)
+
 class TribeBase(BaseModel):
     name: str
 
