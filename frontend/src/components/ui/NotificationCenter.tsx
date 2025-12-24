@@ -15,9 +15,11 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const { isLoggedIn } = useAuth();
+
+  // Derived state for unread count
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const fetchNotifications = async () => {
     if (!isLoggedIn) return;
@@ -26,7 +28,6 @@ export function NotificationCenter() {
       // The api utility returns the data directly, not wrapped in a response object
       if (Array.isArray(data)) {
         setNotifications(data);
-        setUnreadCount(data.filter((n) => !n.is_read).length);
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -41,21 +42,27 @@ export function NotificationCenter() {
       return () => clearInterval(interval);
     } else {
       setNotifications([]);
-      setUnreadCount(0);
     }
   }, [isLoggedIn]);
 
   const handleMarkAsRead = async (id: string) => {
+    const notification = notifications.find((n) => (n.id === id || n._id === id));
+    if (!notification || notification.is_read) return;
+
+    // Optimistic update
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id || n._id === id ? { ...n, is_read: true } : n))
+    );
+
     try {
       // api.patch requires data as the second argument
       await api.patch(`/notifications/${id}/read`, {});
-      // Update local state optimistic update
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id || n._id === id ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
+      // Revert if failed (optional, but keeps UI consistent with backend)
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id || n._id === id ? { ...n, is_read: false } : n))
+      );
     }
   };
 
