@@ -140,42 +140,10 @@ async def invite_member(
     print(f"DEBUG: searching for user with phone: {invite.phone_number}")
     user_to_invite = await db.users.find_one({"phone": invite.phone_number})
     if not user_to_invite:
-        print(f"DEBUG: User not found for phone: {invite.phone_number}, checking pending invites")
-        
-        # Check if already pending
-        existing_invite = await db.pending_invites.find_one({
-            "tribe_id": ObjectId(tribe_id),
-            "phone": invite.phone_number
-        })
-        if existing_invite:
-             raise HTTPException(status_code=400, detail="Invite already pending for this number")
-
-        # Create Pending Invite
-        pending_invite = PendingInviteInDB(
-            tribe_id=tribe_id,
-            phone=invite.phone_number,
-            trust_level=invite.trust_level,
-            invited_by=str(current_user.id)
-        )
-        result = await db.pending_invites.insert_one(pending_invite.model_dump(by_alias=True, exclude={"id"}))
-        
-        # Return a placeholder response
-        # We construct a virtual user object for the response
-        virtual_user = {
-            "_id": str(result.inserted_id),
-            "name": "Pending Invite",
-            "phone": invite.phone_number,
-            "created_at": datetime.utcnow()
-        }
-        
-        # If pending_invite.id is None (not inserted yet? no, insert_one was called)
-        # Wait, Pydantic model dump exclude id... we need the inserted_id from result
-        
-        return TribeMemberResponse(
-            user=UserResponse(**virtual_user),
-            trust_level=invite.trust_level,
-            status="invited",
-            joined_at=datetime.utcnow()
+        # User requirement: "if a number is not registered then invite should not go to him"
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered. They must sign up for RideTribe before they can be invited."
         )
 
     # Check if already a member
