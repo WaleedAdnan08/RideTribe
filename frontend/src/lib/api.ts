@@ -75,6 +75,8 @@ export const tribeApi = {
     api.delete<void>(`/tribes/${tribeId}/members/${userId}`),
   updateMemberTrust: (tribeId: string, userId: string, trustLevel: string) =>
     api.patch<any>(`/tribes/${tribeId}/members/${userId}`, { trust_level: trustLevel }),
+  respondToInvite: (tribeId: string, status: "accepted" | "declined") =>
+    api.post<any>(`/tribes/${tribeId}/respond`, { status }),
 };
 export const destinationsApi = {
   list: () => api.get<any[]>('/destinations'),

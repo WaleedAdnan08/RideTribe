@@ -316,7 +316,65 @@ const TribePage = () => {
             />
           </div>
           
-          {tribes.map(tribe => {
+          {/* Pending Invites Section */}
+          {tribes.filter(t => t.membership_status === 'invited').length > 0 && (
+             <div className="space-y-4 mb-8">
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-amber-600">
+                   <ShieldAlert className="h-5 w-5" /> Pending Invites
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                   {tribes.filter(t => t.membership_status === 'invited').map(tribe => (
+                      <Card key={tribe.id} className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                         <CardHeader className="pb-3">
+                            <CardTitle className="flex justify-between items-start">
+                               <span>{tribe.name}</span>
+                               <Badge variant="outline" className="border-amber-400 text-amber-700">Invited</Badge>
+                            </CardTitle>
+                            <CardDescription>
+                               You have been invited to join this tribe.
+                            </CardDescription>
+                         </CardHeader>
+                         <CardContent className="flex gap-2 justify-end">
+                            <Button
+                               size="sm"
+                               variant="outline"
+                               className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                               onClick={async () => {
+                                  try {
+                                     await tribeApi.respondToInvite(tribe.id, 'declined');
+                                     toast({ title: "Invite Declined", variant: "default" });
+                                     fetchTribes();
+                                  } catch (error) {
+                                     toast({ title: "Error", description: "Failed to decline invite", variant: "destructive" });
+                                  }
+                               }}
+                            >
+                               Decline
+                            </Button>
+                            <Button
+                               size="sm"
+                               className="bg-green-600 hover:bg-green-700 text-white"
+                               onClick={async () => {
+                                  try {
+                                     await tribeApi.respondToInvite(tribe.id, 'accepted');
+                                     toast({ title: "Invite Accepted", description: `You joined ${tribe.name}` });
+                                     fetchTribes();
+                                  } catch (error) {
+                                     toast({ title: "Error", description: "Failed to accept invite", variant: "destructive" });
+                                  }
+                               }}
+                            >
+                               Accept
+                            </Button>
+                         </CardContent>
+                      </Card>
+                   ))}
+                </div>
+             </div>
+          )}
+
+          {/* Active Tribes List */}
+          {tribes.filter(t => t.membership_status === 'accepted' || t.membership_status === undefined).map(tribe => {
             const filteredMembers = tribeMembers[tribe.id]?.filter(member =>
               member.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
               member.user.phone.includes(searchQuery)

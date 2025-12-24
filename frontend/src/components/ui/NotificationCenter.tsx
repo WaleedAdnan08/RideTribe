@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -7,16 +7,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import api from "@/lib/api";
+import api, { tribeApi } from "@/lib/api";
 import { Notification } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const { isLoggedIn } = useAuth();
+  const { toast } = useToast();
 
   // Derived state for unread count
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -64,6 +66,36 @@ export function NotificationCenter() {
         prev.map((n) => (n.id === id || n._id === id ? { ...n, is_read: false } : n))
       );
     }
+  };
+
+  const handleRespondToInvite = async (e: React.MouseEvent, notification: Notification, status: "accepted" | "declined") => {
+      e.stopPropagation(); // Prevent marking as read trigger if nested
+      if (!notification.related_id) return;
+
+      try {
+          await tribeApi.respondToInvite(notification.related_id, status);
+          
+          toast({
+              title: status === "accepted" ? "Invite Accepted" : "Invite Declined",
+              description: status === "accepted"
+                  ? "You have joined the tribe."
+                  : "You declined the tribe invitation.",
+              variant: status === "accepted" ? "default" : "destructive"
+          });
+
+          // Mark notification as read automatically
+          handleMarkAsRead(notification.id || notification._id!);
+          
+          // Ideally we should also refresh the tribes list if we were on that page,
+          // but that state is local to TribePage. The user will see it update on refresh.
+          
+      } catch (error: any) {
+          toast({
+              title: "Error",
+              description: error.message || "Failed to respond to invite.",
+              variant: "destructive"
+          });
+      }
   };
 
   return (
@@ -114,7 +146,27 @@ export function NotificationCenter() {
                       })}
                     </span>
                   </div>
-                  <p className="text-sm leading-snug">{notification.message}</p>
+                  <p className="text-sm leading-snug mb-2">{notification.message}</p>
+                  
+                  {notification.type === "invite_received" && notification.related_id && !notification.is_read && (
+                      <div className="flex gap-2 mt-2">
+                          <Button
+                              size="sm"
+                              className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700 text-white"
+                              onClick={(e) => handleRespondToInvite(e, notification, "accepted")}
+                          >
+                              <Check className="w-3 h-3 mr-1" /> Accept
+                          </Button>
+                          <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              onClick={(e) => handleRespondToInvite(e, notification, "declined")}
+                          >
+                              <X className="w-3 h-3 mr-1" /> Decline
+                          </Button>
+                      </div>
+                  )}
                 </div>
               ))}
             </div>

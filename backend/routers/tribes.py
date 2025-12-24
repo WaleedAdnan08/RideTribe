@@ -6,7 +6,7 @@ from db import db
 from models import (
     UserInDB, TribeCreate, TribeResponse, TribeInDB,
     TribeInvite, TribeMembershipInDB, TribeMemberResponse, UserResponse,
-    TribeMemberUpdate, NotificationInDB, PendingInviteInDB
+    TribeMemberUpdate, NotificationInDB, PendingInviteInDB, TribeInviteResponseRequest
 )
 from datetime import datetime
 from auth import get_current_user
@@ -21,13 +21,23 @@ async def debug_ping():
 async def list_tribes(current_user: UserInDB = Depends(get_current_user)):
     # Find all memberships for the user
     memberships = await db.tribe_memberships.find({"user_id": str(current_user.id)}).to_list(100)
-    tribe_ids = [ObjectId(m["tribe_id"]) for m in memberships]
+    
+    # Create a map of tribe_id -> status
+    status_map = {m["tribe_id"]: m.get("status", "accepted") for m in memberships}
+    tribe_ids = [ObjectId(tid) for tid in status_map.keys()]
     
     # Find all tribes matching these IDs
     if not tribe_ids:
         return []
         
     tribes = await db.tribes.find({"_id": {"$in": tribe_ids}}).to_list(100)
+    
+    # Enrich tribes with status
+    for tribe in tribes:
+        tid = str(tribe["_id"])
+        if tid in status_map:
+            tribe["membership_status"] = status_map[tid]
+            
     return tribes
 
 from fastapi import Request
@@ -180,21 +190,17 @@ async def invite_member(
             detail="User is already a member or has a pending invite"
         )
         
-    # Create membership (auto-accept for MVP simplicity)
+    # Create membership with invited status
     new_membership = TribeMembershipInDB(
         tribe_id=tribe_id,
         user_id=str(user_to_invite["_id"]),
         trust_level=invite.trust_level,
-        status="accepted" 
+        status="invited"
     )
     
     await db.tribe_memberships.insert_one(new_membership.model_dump(by_alias=True, exclude={"id"}))
     
-    # Update member count
-    await db.tribes.update_one(
-        {"_id": ObjectId(tribe_id)},
-        {"$inc": {"member_count": 1}}
-    )
+    # Note: We do NOT increment member_count here anymore, only upon acceptance
     
     return TribeMemberResponse(
         user=UserResponse(**user_to_invite),
@@ -332,6 +338,61 @@ async def update_member_trust(
     # Fetch updated membership details for response
     updated_membership = await db.tribe_memberships.find_one({"_id": membership["_id"]})
     user = await db.users.find_one({"_id": ObjectId(user_id)})
+    
+    return TribeMemberResponse(
+        user=UserResponse(**user),
+        trust_level=updated_membership["trust_level"],
+        status=updated_membership["status"],
+        joined_at=updated_membership["created_at"]
+    )
+
+@router.post("/{tribe_id}/respond", response_model=TribeMemberResponse)
+async def respond_to_invite(
+    tribe_id: str,
+    response: TribeInviteResponseRequest,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    # Check if membership exists
+    membership = await db.tribe_memberships.find_one({
+        "tribe_id": tribe_id,
+        "user_id": str(current_user.id)
+    })
+    
+    if not membership:
+        raise HTTPException(status_code=404, detail="Invite not found")
+        
+    if membership["status"] != "invited":
+        # Allow updating from declined back to accepted? Or just strictly from invited?
+        # User requirement: "if he/she accepts the invite then should say as accepted and if reject then rejected/declined"
+        # If it's already accepted, we probably shouldn't do anything or return success.
+        # If it's declined, maybe we allow re-accepting?
+        # For now, let's enforce that it must be 'invited' or 'declined' to accept.
+        if membership["status"] == "accepted":
+             raise HTTPException(status_code=400, detail="Invite already accepted")
+
+    if response.status == "accepted":
+        # Update status
+        await db.tribe_memberships.update_one(
+            {"_id": membership["_id"]},
+            {"$set": {"status": "accepted"}}
+        )
+        
+        # Increment member count (only if it wasn't already accepted, which we checked above)
+        await db.tribes.update_one(
+            {"_id": ObjectId(tribe_id)},
+            {"$inc": {"member_count": 1}}
+        )
+        
+    elif response.status == "declined":
+        await db.tribe_memberships.update_one(
+             {"_id": membership["_id"]},
+             {"$set": {"status": "declined"}}
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    updated_membership = await db.tribe_memberships.find_one({"_id": membership["_id"]})
+    user = await db.users.find_one({"_id": ObjectId(current_user.id)})
     
     return TribeMemberResponse(
         user=UserResponse(**user),

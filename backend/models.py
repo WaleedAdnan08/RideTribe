@@ -84,6 +84,7 @@ class TribeResponse(TribeBase):
     owner_id: PyObjectId
     member_count: int
     created_at: datetime
+    membership_status: Optional[str] = None # "accepted", "invited", etc.
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -121,6 +122,9 @@ class TribeMemberResponse(BaseModel):
     joined_at: datetime
 class TribeMemberUpdate(BaseModel):
     trust_level: str
+
+class TribeInviteResponseRequest(BaseModel):
+    status: str # "accepted" or "declined"
 
 class PendingInviteInDB(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)

@@ -40,15 +40,11 @@ async def signup(user: UserCreate):
             tribe_id=str(invite["tribe_id"]),
             user_id=str(new_user.inserted_id),
             trust_level=invite["trust_level"],
-            status="accepted"
+            status="invited"
         )
         await db.tribe_memberships.insert_one(membership.model_dump(by_alias=True, exclude={"id"}))
         
-        # Increment tribe member count
-        await db.tribes.update_one(
-            {"_id": invite["tribe_id"]},
-            {"$inc": {"member_count": 1}}
-        )
+        # Note: Do NOT increment tribe member count here. Wait for acceptance.
         
         # Notify new user
         tribe = await db.tribes.find_one({"_id": invite["tribe_id"]})
@@ -56,8 +52,8 @@ async def signup(user: UserCreate):
         
         notification = NotificationInDB(
             user_id=str(new_user.inserted_id),
-            type="invite_accepted",
-            message=f"You have automatically joined the tribe '{tribe_name}' based on a pending invite.",
+            type="invite_received",
+            message=f"You have been invited to join the tribe '{tribe_name}'!",
             related_id=str(invite["tribe_id"])
         )
         await db.notifications.insert_one(notification.model_dump(by_alias=True, exclude={"id"}))
