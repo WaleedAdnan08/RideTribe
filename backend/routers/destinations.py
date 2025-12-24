@@ -6,7 +6,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from models import DestinationCreate, DestinationResponse, DestinationInDB, UserInDB, DestinationUpdate
 from auth import get_current_user
-from matching import find_and_create_matches
+from matching import find_and_create_matches, invalidate_schedule_matches
 
 router = APIRouter()
 
@@ -150,9 +150,8 @@ async def update_destination(
             
             # INVALIDATE existing matches for this schedule since location changed
             # We delete suggested/accepted matches because the location constraint is violated
-            # NOTE: For 'accepted' matches, ideally we should notify users, but for now we reset state.
-            await db.matches.delete_many({"schedule_entry_id": str(sched_id)})
-            await db.matches.delete_many({"provider_schedule_id": str(sched_id)})
+            # This ensures partners are notified if they had an accepted match
+            await invalidate_schedule_matches(str(sched_id), reason="destination changed")
             
             # Re-trigger matching
             background_tasks.add_task(find_and_create_matches, str(sched_id))
@@ -178,8 +177,8 @@ async def update_destination(
         for schedule in active_schedules:
             sched_id = schedule["_id"]
              # Delete existing matches as criteria changed
-            await db.matches.delete_many({"schedule_entry_id": str(sched_id)})
-            await db.matches.delete_many({"provider_schedule_id": str(sched_id)})
+             # This ensures partners are notified if they had an accepted match
+            await invalidate_schedule_matches(str(sched_id), reason="destination updated")
             
             # Re-trigger matching
             background_tasks.add_task(find_and_create_matches, str(sched_id))

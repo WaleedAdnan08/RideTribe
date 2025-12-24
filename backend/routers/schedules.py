@@ -13,7 +13,7 @@ from models import (
 )
 from auth import get_current_user
 
-from matching import find_and_create_matches
+from matching import find_and_create_matches, invalidate_schedule_matches
 
 router = APIRouter()
 
@@ -93,14 +93,19 @@ async def delete_schedule(
     except (InvalidId, TypeError, ValueError):
         raise HTTPException(status_code=400, detail="Invalid schedule ID format")
 
+    # Check if schedule exists and belongs to user
+    existing_schedule = await db.schedules.find_one({"_id": oid, "user_id": str(current_user.id)})
+    if not existing_schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found or you don't have permission to delete it")
+
+    # INVALIDATE matches before deleting
+    # This ensures partners are notified if they had an accepted match
+    await invalidate_schedule_matches(schedule_id, reason="schedule deleted")
+
     result = await db.schedules.delete_one({
-        "_id": oid,
-        "user_id": str(current_user.id)
+        "_id": oid
     })
     
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Schedule not found or you don't have permission to delete it")
-        
     return None
 
 @router.put("/{schedule_id}", response_model=ScheduleEntryResponse)
@@ -160,6 +165,11 @@ async def update_schedule(
             
     # Trigger matching if critical fields changed
     if any(k in update_data for k in ["destination_id", "pickup_time", "recurrence"]):
+         # INVALIDATE existing matches because core criteria changed
+         # This ensures partners are notified if they had an accepted match
+         await invalidate_schedule_matches(schedule_id, reason="schedule updated")
+         
+         # Re-trigger matching
          background_tasks.add_task(find_and_create_matches, str(oid))
 
     return ScheduleEntryResponse(**updated_schedule_doc, destination=destination_resp)

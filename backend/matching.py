@@ -170,3 +170,55 @@ async def find_and_create_matches(schedule_id: str):
             related_id=match_id
         )
         await db.notifications.insert_one(prov_notification.model_dump(by_alias=True, exclude={"id"}))
+
+async def invalidate_schedule_matches(schedule_id: str, reason: str = "schedule changed"):
+    """
+    Finds and removes matches for a schedule that is being modified or deleted.
+    If a match was 'accepted', it notifies the other party.
+    """
+    
+    # Find all matches involving this schedule
+    # We check both schedule_entry_id (if this was the trigger) and provider_schedule_id (if this was found as match)
+    matches_to_invalidate = await db.matches.find({
+        "$or": [
+            {"schedule_entry_id": schedule_id},
+            {"provider_schedule_id": schedule_id}
+        ]
+    }).to_list(1000)
+    
+    for match in matches_to_invalidate:
+        # If match was accepted, we need to notify the partners
+        if match.get("status") == "accepted":
+            
+            # Determine who is who
+            requester_id = match["requester_id"]
+            provider_id = match["provider_id"]
+            
+            # If the schedule being modified belongs to requester, notify provider, and vice-versa.
+            # We can check which schedule ID matches.
+            
+            affected_user_id = None
+            if match["schedule_entry_id"] == schedule_id:
+                # The "requester" owns the changed schedule, notify provider
+                affected_user_id = provider_id
+                changing_user_id = requester_id
+            else:
+                # The "provider" owns the changed schedule, notify requester
+                affected_user_id = requester_id
+                changing_user_id = provider_id
+                
+            # Fetch names for better notification
+            changing_user = await db.users.find_one({"_id": ObjectId(changing_user_id)})
+            changing_user_name = changing_user["name"] if changing_user else "Partner"
+            
+            # Create notification
+            notification = NotificationInDB(
+                user_id=affected_user_id,
+                type="match_cancelled",
+                message=f"Ride match with {changing_user_name} was cancelled because their schedule changed.",
+                related_id=str(match["_id"])
+            )
+            await db.notifications.insert_one(notification.model_dump(by_alias=True, exclude={"id"}))
+
+        # Delete the match
+        await db.matches.delete_one({"_id": match["_id"]})
