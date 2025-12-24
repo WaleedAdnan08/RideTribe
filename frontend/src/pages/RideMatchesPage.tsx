@@ -179,11 +179,11 @@ const RideMatchesPage = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-1 text-sm">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-4">
                                   <span className="text-muted-foreground text-xs uppercase tracking-wide w-16">Requester</span>
                                   <span className="font-medium">{requester?.name || "Unknown"}</span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-4">
                                   <span className="text-muted-foreground text-xs uppercase tracking-wide w-16">Provider</span>
                                   <span className="font-medium">{provider?.name || "Unknown"}</span>
                                 </div>
