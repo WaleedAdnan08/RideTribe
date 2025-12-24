@@ -38,6 +38,13 @@ async def list_tribes(current_user: UserInDB = Depends(get_current_user)):
         if tid in status_map:
             tribe["membership_status"] = status_map[tid]
             
+            # Populate invited_by_name if available
+            membership = next((m for m in memberships if m["tribe_id"] == tid), None)
+            if membership and membership.get("invited_by_id"):
+                inviter = await db.users.find_one({"_id": ObjectId(membership["invited_by_id"])})
+                if inviter:
+                    tribe["invited_by_name"] = inviter["name"]
+            
     return tribes
 
 from fastapi import Request
@@ -163,27 +170,22 @@ async def invite_member(
         tribe_id=tribe_id,
         user_id=str(user_to_invite["_id"]),
         trust_level=invite.trust_level,
-        status="invited"
+        status="invited",
+        invited_by_id=str(current_user.id)
     )
     
     await db.tribe_memberships.insert_one(new_membership.model_dump(by_alias=True, exclude={"id"}))
     
     # Note: We do NOT increment member_count here anymore, only upon acceptance
     
-    return TribeMemberResponse(
-        user=UserResponse(**user_to_invite),
-        trust_level=new_membership.trust_level,
-        status=new_membership.status,
-        joined_at=new_membership.created_at
-    )
-
     # Send notification to the invited user
     notification = NotificationInDB(
         user_id=str(user_to_invite["_id"]),
         type="invite_received",
-        message=f"You have been invited to join the tribe '{tribe['name']}'!",
+        message=f"You have been invited by {current_user.name} to join the tribe '{tribe['name']}'!",
         related_id=tribe_id
     )
+    print(f"DEBUG: Notification Message Generated: {notification.message}")
     await db.notifications.insert_one(notification.model_dump(by_alias=True, exclude={"id"}))
 
     return TribeMemberResponse(

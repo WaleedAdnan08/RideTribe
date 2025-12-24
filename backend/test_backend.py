@@ -72,6 +72,14 @@ def test_invite_member(token, tribe_id, phone_to_invite):
     response = requests.post(f"{BASE_URL}/tribes/{tribe_id}/invite", json=payload, headers=headers)
     return response.status_code == 200
 
+def test_respond_invite(token, tribe_id, status):
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "status": status
+    }
+    response = requests.post(f"{BASE_URL}/tribes/{tribe_id}/respond", json=payload, headers=headers)
+    return response.status_code == 200
+
 def test_create_destination(token, name="Match School"):
     headers = {"Authorization": f"Bearer {token}"}
     payload = {
@@ -143,6 +151,13 @@ def run_matching_test():
     print("User A inviting User B...")
     test_invite_member(token_a, tribe_id, phone_b)
     print("User B invited.")
+
+    # 4b. User B accepts invite
+    print("User B accepting invite...")
+    if test_respond_invite(token_b, tribe_id, "accepted"):
+        print("User B accepted invite.")
+    else:
+        print("User B failed to accept invite.")
 
     # 5. User A creates Destination
     print("User A creating Destination...")

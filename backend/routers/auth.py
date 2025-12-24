@@ -50,10 +50,17 @@ async def signup(user: UserCreate):
         tribe = await db.tribes.find_one({"_id": invite["tribe_id"]})
         tribe_name = tribe["name"] if tribe else "Unknown Tribe"
         
+        # Fetch inviter name
+        inviter_name = "someone"
+        if "invited_by" in invite:
+            inviter = await db.users.find_one({"_id": ObjectId(invite["invited_by"])})
+            if inviter:
+                inviter_name = inviter["name"]
+
         notification = NotificationInDB(
             user_id=str(new_user.inserted_id),
             type="invite_received",
-            message=f"You have been invited to join the tribe '{tribe_name}'!",
+            message=f"You have been invited by {inviter_name} to join the tribe '{tribe_name}'!",
             related_id=str(invite["tribe_id"])
         )
         await db.notifications.insert_one(notification.model_dump(by_alias=True, exclude={"id"}))

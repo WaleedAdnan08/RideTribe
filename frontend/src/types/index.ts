@@ -20,6 +20,7 @@ export interface Tribe {
   member_count: number;
   created_at?: string;
   membership_status?: TribeMembershipStatus;
+  invited_by_name?: string;
 }
 
 export interface TribeMember {

@@ -331,7 +331,7 @@ const TribePage = () => {
                                <Badge variant="outline" className="border-amber-400 text-amber-700">Invited</Badge>
                             </CardTitle>
                             <CardDescription>
-                               You have been invited to join this tribe.
+                               You have been invited to join this tribe{tribe.invited_by_name ? ` by ${tribe.invited_by_name}` : ""}.
                             </CardDescription>
                          </CardHeader>
                          <CardContent className="flex gap-2 justify-end">

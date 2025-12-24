@@ -85,6 +85,7 @@ class TribeResponse(TribeBase):
     member_count: int
     created_at: datetime
     membership_status: Optional[str] = None # "accepted", "invited", etc.
+    invited_by_name: Optional[str] = None
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -105,6 +106,7 @@ class TribeMembershipBase(BaseModel):
     user_id: PyObjectId
     trust_level: str
     status: str
+    invited_by_id: Optional[PyObjectId] = None
 
 class TribeMembershipInDB(TribeMembershipBase):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
