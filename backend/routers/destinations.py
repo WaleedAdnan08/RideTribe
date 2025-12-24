@@ -7,6 +7,7 @@ from bson.errors import InvalidId
 from models import DestinationCreate, DestinationResponse, DestinationInDB, UserInDB, DestinationUpdate
 from auth import get_current_user
 from matching import find_and_create_matches, invalidate_schedule_matches
+from services.google_maps import get_place_details
 
 router = APIRouter()
 
@@ -34,6 +35,14 @@ async def create_destination(
     destination_data = destination.model_dump()
     destination_data["created_by"] = current_user.id
     
+    # Verify with Google Places API if place_id is provided
+    if destination.google_place_id:
+        verified_data = await get_place_details(destination.google_place_id)
+        if verified_data:
+            # Override with verified data
+            destination_data.update(verified_data)
+            destination_data["verified_date"] = datetime.now(timezone.utc)
+            
     # Create DB model
     new_destination = DestinationInDB(**destination_data)
     
@@ -99,6 +108,14 @@ async def update_destination(
     
     if not update_data:
         return destination # No changes
+
+    # Verify if google_place_id is being updated
+    if "google_place_id" in update_data:
+        verified_data = await get_place_details(update_data["google_place_id"])
+        if verified_data:
+            # Override with verified data
+            update_data.update(verified_data)
+            update_data["verified_date"] = datetime.now(timezone.utc)
         
     # Check if used in any past/completed schedules
     # "Past" means completed status OR pickup_time < now
