@@ -4,6 +4,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
 import time
 from db import db
+from config import settings
 from routers import auth, destinations, tribes, schedules, matches, notifications
 
 app = FastAPI()
@@ -37,6 +38,7 @@ origins = [
     "http://127.0.0.1:5173",
     "http://localhost:5137",
     "http://127.0.0.1:5137",
+    settings.FRONTEND_URL,
 ]
 
 app.add_middleware(
@@ -69,3 +71,6 @@ async def health_check():
 # Trigger reload
 # Force reload - version 2
 logger.info("MAIN.PY RELOADED - VERSION 2")
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
