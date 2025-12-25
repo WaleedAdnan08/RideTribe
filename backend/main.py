@@ -46,6 +46,7 @@ origins = [
     "http://localhost:5137",
     "http://127.0.0.1:5137",
     frontend_url,
+    "https://ridetribe-pwkh.onrender.com",
 ]
 
 app.add_middleware(
