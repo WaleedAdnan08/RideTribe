@@ -25,13 +25,17 @@ def verify_password(plain_password, hashed_password):
 
 def get_password_hash(password):
     # Bcrypt has a 72-byte limit. Truncate to avoid "password too long" errors.
+    print(f"DEBUG_HASH: Input Type: {type(password)}")
     if isinstance(password, str):
         # Check byte length
         encoded = password.encode('utf-8')
+        print(f"DEBUG_HASH: Encoded Length: {len(encoded)}")
         if len(encoded) > 71:
+            print("DEBUG_HASH: Truncating password...")
             # Truncate to 71 bytes to be safe and decode back to string
             # ignoring any partial multibyte characters at the end
             password = encoded[:71].decode('utf-8', errors='ignore')
+            print(f"DEBUG_HASH: New Length: {len(password.encode('utf-8'))}")
             
     return pwd_context.hash(password)
 

@@ -98,14 +98,14 @@ async def test_db_write():
 @app.get("/api/v1/version")
 async def get_version():
     return {
-        "version": "1.0.2",
-        "features": ["cors_fix", "password_length_fix_v2", "db_write_test"],
+        "version": "1.0.3",
+        "features": ["cors_fix", "password_length_fix_v3", "db_write_test", "auth_debug_logs"],
         "timestamp": time.time()
     }
 
 # Trigger reload
-# Force reload - version 5
-logger.info("MAIN.PY RELOADED - VERSION 6")
+# Force reload - version 7
+logger.info("MAIN.PY RELOADED - VERSION 7")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
