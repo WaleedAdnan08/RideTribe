@@ -47,7 +47,13 @@ origins = [
     "http://127.0.0.1:5137",
     frontend_url,
     "https://ridetribe-pwkh.onrender.com",
+    "https://ridetribe-pwkh.onrender.com/", # Just in case
 ]
+
+# Deduplicate origins
+origins = list(set(origins))
+
+logger.info(f"CORS Allowed Origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -77,8 +83,8 @@ async def health_check():
     except Exception as e:
         return {"status": "error", "db": "disconnected", "detail": str(e)}
 # Trigger reload
-# Force reload - version 2
-logger.info("MAIN.PY RELOADED - VERSION 2")
+# Force reload - version 3
+logger.info("MAIN.PY RELOADED - VERSION 3")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

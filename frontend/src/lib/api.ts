@@ -13,6 +13,10 @@ const getBaseUrl = () => {
 };
 
 export const API_BASE_URL = getBaseUrl();
+console.log('API Config:', {
+  envApiUrl: import.meta.env.VITE_API_URL,
+  computedBaseUrl: API_BASE_URL
+});
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
