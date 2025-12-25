@@ -14,6 +14,11 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setPhoneNumber(value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -73,11 +78,13 @@ const LoginPage = () => {
               <Input
                 id="phoneNumber"
                 type="tel"
-                placeholder="+1 555 123 4567"
+                placeholder="11-digit phone number"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={handlePhoneChange}
                 required
                 className="h-11 bg-card"
+                minLength={11}
+                maxLength={11}
               />
             </div>
             

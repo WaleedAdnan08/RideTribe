@@ -12,6 +12,11 @@ const SignupPage = () => {
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setPhoneNumber(value);
+  };
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
 
@@ -96,12 +101,17 @@ const SignupPage = () => {
               <Input
                 id="phoneNumber"
                 type="tel"
-                placeholder="+1 555 123 4567"
+                placeholder="11-digit phone number"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={handlePhoneChange}
                 required
                 className="h-11 bg-card"
+                minLength={11}
+                maxLength={11}
               />
+              <p className="text-xs text-muted-foreground">
+                {phoneNumber.length}/11 digits
+              </p>
             </div>
             
             <div className="space-y-2">

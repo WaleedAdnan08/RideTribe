@@ -18,6 +18,14 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        normalized = normalize_phone(v)
+        if len(normalized) != 11:
+            raise ValueError('Phone number must be exactly 11 digits')
+        return normalized
+
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,
@@ -60,7 +68,10 @@ class UserUpdate(BaseModel):
     def validate_phone(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return None
-        return normalize_phone(v)
+        normalized = normalize_phone(v)
+        if len(normalized) != 11:
+            raise ValueError('Phone number must be exactly 11 digits')
+        return normalized
 
 class TribeBase(BaseModel):
     name: str
@@ -99,7 +110,10 @@ class TribeInvite(BaseModel):
     @field_validator('phone_number')
     @classmethod
     def validate_phone(cls, v: str) -> str:
-        return normalize_phone(v)
+        normalized = normalize_phone(v)
+        if len(normalized) != 11:
+            raise ValueError('Phone number must be exactly 11 digits')
+        return normalized
 
 class TribeMembershipBase(BaseModel):
     tribe_id: PyObjectId

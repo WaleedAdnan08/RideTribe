@@ -47,6 +47,11 @@ const TribePage = () => {
     trustLevel: "direct" as TrustLevel
   });
 
+  const handleInvitePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setInviteData({ ...inviteData, phoneNumber: value });
+  };
+
   // Edit Trust Level State
   const [isEditTrustDialogOpen, setIsEditTrustDialogOpen] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState<{ tribeId: string; member: TribeMember } | null>(null);
@@ -505,9 +510,14 @@ const TribePage = () => {
                 <Input
                   id="phone"
                   value={inviteData.phoneNumber}
-                  onChange={(e) => setInviteData({ ...inviteData, phoneNumber: e.target.value })}
-                  placeholder="+1234567890"
+                  onChange={handleInvitePhoneChange}
+                  placeholder="11-digit phone number"
+                  minLength={11}
+                  maxLength={11}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {inviteData.phoneNumber.length}/11 digits
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="trust">Trust Level</Label>

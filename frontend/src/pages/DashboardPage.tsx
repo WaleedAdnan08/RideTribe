@@ -19,6 +19,11 @@ const DashboardPage = () => {
     phone: ""
   });
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setEditForm({ ...editForm, phone: value });
+  };
+
   const handleEditProfileOpen = () => {
     if (currentUser) {
       setEditForm({
@@ -127,8 +132,14 @@ const DashboardPage = () => {
                         <Input
                           id="phone"
                           value={editForm.phone}
-                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                          onChange={handlePhoneChange}
+                          placeholder="11-digit phone number"
+                          minLength={11}
+                          maxLength={11}
                         />
+                        <p className="text-xs text-muted-foreground">
+                          {editForm.phone.length}/11 digits
+                        </p>
                       </div>
                     </div>
                     <DialogFooter>
