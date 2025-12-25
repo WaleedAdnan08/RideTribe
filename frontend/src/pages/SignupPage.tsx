@@ -11,17 +11,29 @@ import { Loader2, Users, Star } from "lucide-react";
 const SignupPage = () => {
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [password, setPassword] = useState("");
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 11);
     setPhoneNumber(value);
+    if (value.length > 0 && value.length !== 11) {
+       setPhoneError("Invalid Phone Number");
+    } else {
+       setPhoneError("");
+    }
   };
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (phoneNumber.length !== 11) {
+      setPhoneError("Invalid Phone Number");
+      return;
+    }
+
     setIsLoading(true);
     try {
       await signup(name, phoneNumber, password);
@@ -105,13 +117,20 @@ const SignupPage = () => {
                 value={phoneNumber}
                 onChange={handlePhoneChange}
                 required
-                className="h-11 bg-card"
+                className={`h-11 bg-card ${phoneError ? "border-destructive" : ""}`}
                 minLength={11}
                 maxLength={11}
               />
-              <p className="text-xs text-muted-foreground">
-                {phoneNumber.length}/11 digits
-              </p>
+              <div className="flex justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {phoneNumber.length}/11 digits
+                </p>
+                {phoneError && (
+                  <p className="text-xs text-destructive font-medium">
+                    {phoneError}
+                  </p>
+                )}
+              </div>
             </div>
             
             <div className="space-y-2">

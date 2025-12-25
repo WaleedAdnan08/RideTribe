@@ -46,10 +46,16 @@ const TribePage = () => {
     phoneNumber: "",
     trustLevel: "direct" as TrustLevel
   });
+  const [phoneError, setPhoneError] = useState("");
 
   const handleInvitePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 11);
     setInviteData({ ...inviteData, phoneNumber: value });
+    if (value.length > 0 && value.length !== 11) {
+      setPhoneError("Invalid Phone Number");
+    } else {
+      setPhoneError("");
+    }
   };
 
   // Edit Trust Level State
@@ -135,6 +141,11 @@ const TribePage = () => {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTribeId || !inviteData.phoneNumber) return;
+
+    if (inviteData.phoneNumber.length !== 11) {
+      setPhoneError("Invalid Phone Number");
+      return;
+    }
 
     try {
       setIsInviting(true);
@@ -514,10 +525,18 @@ const TribePage = () => {
                   placeholder="11-digit phone number"
                   minLength={11}
                   maxLength={11}
+                  className={phoneError ? "border-destructive" : ""}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {inviteData.phoneNumber.length}/11 digits
-                </p>
+                <div className="flex justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {inviteData.phoneNumber.length}/11 digits
+                  </p>
+                  {phoneError && (
+                    <p className="text-xs text-destructive font-medium">
+                      {phoneError}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="trust">Trust Level</Label>

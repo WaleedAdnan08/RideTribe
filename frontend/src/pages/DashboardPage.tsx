@@ -14,6 +14,7 @@ const DashboardPage = () => {
   const { currentUser, logout, updateProfile } = useAuth();
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
   const [editForm, setEditForm] = useState({
     name: "",
     phone: ""
@@ -22,6 +23,11 @@ const DashboardPage = () => {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 11);
     setEditForm({ ...editForm, phone: value });
+    if (value.length > 0 && value.length !== 11) {
+      setPhoneError("Invalid Phone Number");
+    } else {
+      setPhoneError("");
+    }
   };
 
   const handleEditProfileOpen = () => {
@@ -36,6 +42,12 @@ const DashboardPage = () => {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (editForm.phone.length !== 11) {
+      setPhoneError("Invalid Phone Number");
+      return;
+    }
+
     try {
       setIsUpdating(true);
       await updateProfile(editForm);
@@ -136,10 +148,18 @@ const DashboardPage = () => {
                           placeholder="11-digit phone number"
                           minLength={11}
                           maxLength={11}
+                          className={phoneError ? "border-destructive" : ""}
                         />
-                        <p className="text-xs text-muted-foreground">
-                          {editForm.phone.length}/11 digits
-                        </p>
+                        <div className="flex justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            {editForm.phone.length}/11 digits
+                          </p>
+                          {phoneError && (
+                            <p className="text-xs text-destructive font-medium">
+                              {phoneError}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <DialogFooter>
