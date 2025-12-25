@@ -13,73 +13,82 @@ router = APIRouter()
 
 @router.post("/signup", response_model=AuthResponse)
 async def signup(user: UserCreate):
-    # Check if user already exists
-    if await db.users.find_one({"phone": user.phone}):
+    try:
+        # Check if user already exists
+        if await db.users.find_one({"phone": user.phone}):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phone number already registered"
+            )
+        
+        # Create new user
+        hashed_password = get_password_hash(user.password)
+        user_in_db = UserInDB(
+            name=user.name,
+            phone=user.phone,
+            hashed_password=hashed_password
+        )
+        
+        new_user = await db.users.insert_one(user_in_db.model_dump(by_alias=True, exclude={"id"}))
+        created_user = await db.users.find_one({"_id": new_user.inserted_id})
+        
+        # Process Pending Invites
+        pending_invites = await db.pending_invites.find({"phone": user.phone}).to_list(100)
+        
+        for invite in pending_invites:
+            # Create membership
+            membership = TribeMembershipInDB(
+                tribe_id=str(invite["tribe_id"]),
+                user_id=str(new_user.inserted_id),
+                trust_level=invite["trust_level"],
+                status="invited"
+            )
+            await db.tribe_memberships.insert_one(membership.model_dump(by_alias=True, exclude={"id"}))
+            
+            # Note: Do NOT increment tribe member count here. Wait for acceptance.
+            
+            # Notify new user
+            tribe = await db.tribes.find_one({"_id": invite["tribe_id"]})
+            tribe_name = tribe["name"] if tribe else "Unknown Tribe"
+            
+            # Fetch inviter name
+            inviter_name = "someone"
+            if "invited_by" in invite:
+                inviter = await db.users.find_one({"_id": ObjectId(invite["invited_by"])})
+                if inviter:
+                    inviter_name = inviter["name"]
+
+            notification = NotificationInDB(
+                user_id=str(new_user.inserted_id),
+                type="invite_received",
+                message=f"You have been invited by {inviter_name} to join the tribe '{tribe_name}'!",
+                related_id=str(invite["tribe_id"])
+            )
+            await db.notifications.insert_one(notification.model_dump(by_alias=True, exclude={"id"}))
+
+        # Clean up pending invites
+        if pending_invites:
+            await db.pending_invites.delete_many({"phone": user.phone})
+
+        # Create access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.phone}, expires_delta=access_token_expires
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": created_user
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"CRITICAL ERROR IN SIGNUP: {str(e)}") # Force log to stdout
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Phone number already registered"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Signup failed: {str(e)}"
         )
-    
-    # Create new user
-    hashed_password = get_password_hash(user.password)
-    user_in_db = UserInDB(
-        name=user.name,
-        phone=user.phone,
-        hashed_password=hashed_password
-    )
-    
-    new_user = await db.users.insert_one(user_in_db.model_dump(by_alias=True, exclude={"id"}))
-    created_user = await db.users.find_one({"_id": new_user.inserted_id})
-    
-    # Process Pending Invites
-    pending_invites = await db.pending_invites.find({"phone": user.phone}).to_list(100)
-    
-    for invite in pending_invites:
-        # Create membership
-        membership = TribeMembershipInDB(
-            tribe_id=str(invite["tribe_id"]),
-            user_id=str(new_user.inserted_id),
-            trust_level=invite["trust_level"],
-            status="invited"
-        )
-        await db.tribe_memberships.insert_one(membership.model_dump(by_alias=True, exclude={"id"}))
-        
-        # Note: Do NOT increment tribe member count here. Wait for acceptance.
-        
-        # Notify new user
-        tribe = await db.tribes.find_one({"_id": invite["tribe_id"]})
-        tribe_name = tribe["name"] if tribe else "Unknown Tribe"
-        
-        # Fetch inviter name
-        inviter_name = "someone"
-        if "invited_by" in invite:
-            inviter = await db.users.find_one({"_id": ObjectId(invite["invited_by"])})
-            if inviter:
-                inviter_name = inviter["name"]
-
-        notification = NotificationInDB(
-            user_id=str(new_user.inserted_id),
-            type="invite_received",
-            message=f"You have been invited by {inviter_name} to join the tribe '{tribe_name}'!",
-            related_id=str(invite["tribe_id"])
-        )
-        await db.notifications.insert_one(notification.model_dump(by_alias=True, exclude={"id"}))
-
-    # Clean up pending invites
-    if pending_invites:
-        await db.pending_invites.delete_many({"phone": user.phone})
-
-    # Create access token
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.phone}, expires_delta=access_token_expires
-    )
-    
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": created_user
-    }
 
 @router.post("/login", response_model=AuthResponse)
 async def login(user_credentials: UserLogin):

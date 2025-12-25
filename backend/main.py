@@ -82,9 +82,22 @@ async def health_check():
         return {"status": "ok", "db": "connected"}
     except Exception as e:
         return {"status": "error", "db": "disconnected", "detail": str(e)}
+
+@app.get("/api/v1/test_db_write")
+async def test_db_write():
+    try:
+        # Attempt to insert a temporary document
+        result = await db.test_collection.insert_one({"test": "write", "timestamp": time.time()})
+        # Immediately delete it
+        await db.test_collection.delete_one({"_id": result.inserted_id})
+        return {"status": "ok", "write_operation": "successful"}
+    except Exception as e:
+        logger.error(f"DB Write Test Failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"DB Write Failed: {str(e)}")
+
 # Trigger reload
-# Force reload - version 3
-logger.info("MAIN.PY RELOADED - VERSION 3")
+# Force reload - version 4
+logger.info("MAIN.PY RELOADED - VERSION 4")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
