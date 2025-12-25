@@ -33,12 +33,19 @@ async def log_requests(request: Request, call_next):
         logger.error(f"Request failed: {request.method} {request.url} - Error: {str(e)}")
         raise e
 
+# Debug settings issue
+try:
+    frontend_url = settings.FRONTEND_URL
+except AttributeError:
+    logger.error(f"CRITICAL: Settings object missing FRONTEND_URL. Available config: {settings.model_dump()}")
+    frontend_url = "http://localhost:5137" # Fallback
+
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5137",
     "http://127.0.0.1:5137",
-    settings.FRONTEND_URL,
+    frontend_url,
 ]
 
 app.add_middleware(
