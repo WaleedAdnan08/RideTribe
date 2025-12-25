@@ -60,7 +60,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
         title: "Account deleted",
         description: "Your account has been permanently deleted.",
       });
-      logout();
+      logout(false);
     } catch (error) {
       console.error("Failed to delete account:", error);
       toast({
@@ -127,7 +127,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
           </AlertDialogContent>
         </AlertDialog>
         
-        <Button onClick={logout} variant="ghost" className="w-full justify-start text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+        <Button onClick={() => logout()} variant="ghost" className="w-full justify-start text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
           <LogOut className="mr-3 h-4 w-4" />
           Logout
         </Button>

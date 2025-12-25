@@ -18,7 +18,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (phoneNumber: string, password: string) => Promise<void>;
   signup: (name: string, phoneNumber: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: (showNotification?: boolean) => void;
   updateProfile: (data: { name?: string; phone?: string }) => Promise<void>;
 }
 
@@ -109,11 +109,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (showNotification = true) => {
     setCurrentUser(null);
     setIsLoggedIn(false);
     sessionStorage.removeItem("authToken");
-    showSuccess("Logged out successfully.");
+    if (showNotification) {
+      showSuccess("Logged out successfully.");
+    }
     navigate("/login");
   };
 
