@@ -1,4 +1,18 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+// Helper to ensure base URL ends with /api/v1
+const getBaseUrl = () => {
+  let url = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+  // Remove trailing slash if present
+  if (url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+  // Append /api/v1 if not present
+  if (!url.endsWith('/api/v1')) {
+    url = `${url}/api/v1`;
+  }
+  return url;
+};
+
+export const API_BASE_URL = getBaseUrl();
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
