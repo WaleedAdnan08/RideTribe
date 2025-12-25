@@ -9,7 +9,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import api, { tribeApi } from "@/lib/api";
 import { Notification } from "@/types";
-import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -139,11 +138,6 @@ export function NotificationCenter() {
                   <div className="flex justify-between items-start gap-2 mb-1">
                     <span className="text-xs font-medium uppercase text-primary tracking-wide">
                       {notification.type.replace("_", " ")}
-                    </span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(new Date(notification.created_at), {
-                        addSuffix: true,
-                      })}
                     </span>
                   </div>
                   <p className="text-sm leading-snug mb-2">{notification.message}</p>
